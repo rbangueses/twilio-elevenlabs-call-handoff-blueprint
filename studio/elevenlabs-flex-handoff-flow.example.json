@@ -1,0 +1,65 @@
+{
+  "description": "Returns ElevenLabs voice escalations to Flex.",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        {
+          "event": "incomingCall",
+          "next": "redirect_to_elevenlabs"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "redirect_to_elevenlabs",
+      "type": "twiml-redirect",
+      "transitions": [
+        {
+          "event": "return",
+          "next": "send_to_flex_1"
+        }
+      ],
+      "properties": {
+        "method": "POST",
+        "url": "https://your-domain.twil.io/studio_voice",
+        "offset": {
+          "x": 240,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "send_to_flex_1",
+      "type": "send-to-flex",
+      "transitions": [],
+      "properties": {
+        "channel": "voice",
+        "attributes": {
+          "type": "inbound",
+          "name": "{{trigger.call.From}}",
+          "from": "{{trigger.call.From}}",
+          "customerAddress": "{{trigger.call.From}}",
+          "customerName": "{{trigger.call.From}}",
+          "channelType": "voice",
+          "reason": "ai_escalation",
+          "intent": "{{widgets.redirect_to_elevenlabs.intent}}",
+          "summary": "{{widgets.redirect_to_elevenlabs.summary}}",
+          "description": "{{widgets.redirect_to_elevenlabs.description}}",
+          "parentCallSid": "{{widgets.redirect_to_elevenlabs.parentCallSid}}",
+          "handoffId": "{{widgets.redirect_to_elevenlabs.handoffId}}"
+        },
+        "offset": {
+          "x": 480,
+          "y": 0
+        }
+      }
+    }
+  ]
+}

@@ -53,4 +53,29 @@ function buildTaskrouterTwiML(config, payload) {
   return response.toString();
 }
 
-module.exports = { normalizeHandoffPayload, buildTaskAttributes, buildTaskrouterTwiML };
+function buildStudioReturnTwiML(config, payload) {
+  const { VoiceResponse } = require("twilio").twiml;
+  if (!config.studioFlowWebhookUrl) {
+    throw new Error("STUDIO_FLOW_WEBHOOK_URL is required for Studio escalation");
+  }
+
+  const url = new URL(config.studioFlowWebhookUrl);
+  url.searchParams.set("FlowEvent", "return");
+  url.searchParams.set("route", "flex");
+  url.searchParams.set("intent", payload.intent);
+  url.searchParams.set("summary", payload.summary);
+  url.searchParams.set("description", payload.description);
+  url.searchParams.set("parentCallSid", payload.parentCallSid);
+  url.searchParams.set("handoffId", payload.handoffId);
+
+  const response = new VoiceResponse();
+  response.redirect({ method: "POST" }, url.toString());
+  return response.toString();
+}
+
+module.exports = {
+  normalizeHandoffPayload,
+  buildTaskAttributes,
+  buildTaskrouterTwiML,
+  buildStudioReturnTwiML,
+};
