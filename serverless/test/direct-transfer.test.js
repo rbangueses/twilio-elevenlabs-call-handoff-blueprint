@@ -22,13 +22,17 @@ test("buildColdDirectTwiML dials the configured destination", () => {
   expect(twiml).toContain("<Dial>+15557654321</Dial>");
 });
 
-test("warm transfer TwiML puts caller and human in same conference", () => {
-  const callerTwiml = buildCallerConferenceTwiML({ directHoldUrl: "https://example.com/hold.xml" }, payload);
-  const humanTwiml = buildHumanWarmJoinTwiML({}, payload);
+test("warm transfer TwiML uses the parent CallSid instead of a free-form handoff ID", () => {
+  const freeFormPayload = { ...payload, handoffId: "Jane Doe" };
+  const conferenceName = `handoff-${parentCallSid}`;
+  const callerTwiml = buildCallerConferenceTwiML({ directHoldUrl: "https://example.com/hold.xml" }, freeFormPayload);
+  const humanTwiml = buildHumanWarmJoinTwiML({}, freeFormPayload);
 
-  expect(callerTwiml).toContain("handoff-handoff-1");
+  expect(callerTwiml).toContain(conferenceName);
   expect(humanTwiml).toContain("Caller needs help resetting access.");
-  expect(humanTwiml).toContain("handoff-handoff-1");
+  expect(humanTwiml).toContain(conferenceName);
+  expect(callerTwiml).not.toContain("Jane Doe");
+  expect(humanTwiml).not.toContain("Jane Doe");
 });
 
 test("createWarmTransferCall creates the human call with the warm summary", async () => {
@@ -107,6 +111,7 @@ test("/escalate direct warm mode updates the parent call and creates human call 
     expect.objectContaining({ directTransferMode: "warm_conference" }),
     payload,
   );
+  expect(dependencies.createWarmTransferCall).toHaveBeenCalledTimes(1);
   expect(callback).toHaveBeenCalledWith(null, { ok: true, route: "direct", handoffId: "handoff-1" });
 });
 

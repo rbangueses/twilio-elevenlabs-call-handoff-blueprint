@@ -64,8 +64,12 @@ function buildColdDirectTwiML(config) {
   return response.toString();
 }
 
-function safeConferenceName(handoffId) {
-  return `handoff-${String(handoffId || "call").replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 64)}`;
+function safeConferenceName(parentCallSid) {
+  if (!CALL_SID.test(parentCallSid)) {
+    throw new Error("Invalid parentCallSid");
+  }
+
+  return `handoff-${parentCallSid}`;
 }
 
 function buildCallerConferenceTwiML(config, payload) {
@@ -77,7 +81,7 @@ function buildCallerConferenceTwiML(config, payload) {
     startConferenceOnEnter: true,
     endConferenceOnExit: true,
     waitUrl: config.directHoldUrl,
-  }, safeConferenceName(payload.handoffId));
+  }, safeConferenceName(payload.parentCallSid));
   return response.toString();
 }
 
@@ -89,7 +93,7 @@ function buildHumanWarmJoinTwiML(config, payload) {
   dial.conference({
     startConferenceOnEnter: true,
     endConferenceOnExit: false,
-  }, safeConferenceName(payload.handoffId));
+  }, safeConferenceName(payload.parentCallSid));
   return response.toString();
 }
 
