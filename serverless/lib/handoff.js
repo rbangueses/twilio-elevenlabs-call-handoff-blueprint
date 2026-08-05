@@ -38,4 +38,19 @@ function buildTaskAttributes(payload) {
   };
 }
 
-module.exports = { normalizeHandoffPayload, buildTaskAttributes };
+function buildTaskrouterTwiML(config, payload) {
+  const { VoiceResponse } = require("twilio").twiml;
+  if (!/^WW[0-9a-fA-F]{32}$/.test(config.flexWorkflowSid)) {
+    throw new Error("FLEX_WORKFLOW_SID must be a TaskRouter Workflow SID starting with WW");
+  }
+
+  const response = new VoiceResponse();
+  const enqueue = response.enqueue({
+    workflowSid: config.flexWorkflowSid,
+    waitUrl: config.taskrouterWaitUrl || undefined,
+  });
+  enqueue.task({}, JSON.stringify(buildTaskAttributes(payload)));
+  return response.toString();
+}
+
+module.exports = { normalizeHandoffPayload, buildTaskAttributes, buildTaskrouterTwiML };
