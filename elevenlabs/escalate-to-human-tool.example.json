@@ -1,0 +1,26 @@
+{
+  "name": "escalate_to_human",
+  "description": "Escalate the active phone call to a human agent using Twilio. Use this only when the caller needs a human or the automation cannot safely continue.",
+  "api_schema": {
+    "url": "https://{{system__env_handoff_host}}/escalate",
+    "method": "POST",
+    "request_headers": {
+      "authorization": "Bearer {{secret__handoff_token}}",
+      "content-type": "application/json"
+    },
+    "request_body_schema": {
+      "type": "object",
+      "properties": {
+        "parentCallSid": { "type": "string", "value": "{{parent_call_sid}}" },
+        "handoffId": { "type": "string", "value": "{{handoff_id}}" },
+        "routingMode": { "type": "string", "value": "{{routing_mode}}" },
+        "intent": { "type": "string", "description": "Snake_case routing intent." },
+        "reason": { "type": "string", "description": "Escalation reason code." },
+        "summary": { "type": "string", "description": "Concise handoff summary for the human." },
+        "from": { "type": "string", "value": "{{caller_number}}" },
+        "to": { "type": "string", "value": "{{called_number}}" }
+      },
+      "required": ["parentCallSid", "handoffId", "intent", "reason", "summary"]
+    }
+  }
+}
