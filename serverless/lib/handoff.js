@@ -53,6 +53,54 @@ function buildTaskrouterTwiML(config, payload) {
   return response.toString();
 }
 
+function buildColdDirectTwiML(config) {
+  const { VoiceResponse } = require("twilio").twiml;
+  if (!config.directTransferTo) {
+    throw new Error("DIRECT_TRANSFER_TO is required for direct transfer");
+  }
+
+  const response = new VoiceResponse();
+  response.dial(config.directTransferTo);
+  return response.toString();
+}
+
+function safeConferenceName(handoffId) {
+  return `handoff-${String(handoffId || "call").replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 64)}`;
+}
+
+function buildCallerConferenceTwiML(config, payload) {
+  const { VoiceResponse } = require("twilio").twiml;
+  const response = new VoiceResponse();
+  response.say("I am connecting you to a specialist now.");
+  const dial = response.dial();
+  dial.conference({
+    startConferenceOnEnter: true,
+    endConferenceOnExit: true,
+    waitUrl: config.directHoldUrl,
+  }, safeConferenceName(payload.handoffId));
+  return response.toString();
+}
+
+function buildHumanWarmJoinTwiML(config, payload) {
+  const { VoiceResponse } = require("twilio").twiml;
+  const response = new VoiceResponse();
+  response.say(`Warm transfer summary. ${payload.summary}`);
+  const dial = response.dial();
+  dial.conference({
+    startConferenceOnEnter: true,
+    endConferenceOnExit: false,
+  }, safeConferenceName(payload.handoffId));
+  return response.toString();
+}
+
+async function createWarmTransferCall(client, config, payload) {
+  await client.calls.create({
+    to: config.directTransferTo,
+    from: config.directTransferFrom,
+    twiml: buildHumanWarmJoinTwiML(config, payload),
+  });
+}
+
 function buildStudioReturnTwiML(config, payload) {
   const { VoiceResponse } = require("twilio").twiml;
   if (!config.studioFlowWebhookUrl) {
@@ -77,5 +125,9 @@ module.exports = {
   normalizeHandoffPayload,
   buildTaskAttributes,
   buildTaskrouterTwiML,
+  buildColdDirectTwiML,
+  buildCallerConferenceTwiML,
+  buildHumanWarmJoinTwiML,
+  createWarmTransferCall,
   buildStudioReturnTwiML,
 };
