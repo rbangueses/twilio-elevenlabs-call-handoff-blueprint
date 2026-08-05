@@ -33,7 +33,7 @@ From `serverless`, copy `.env.example` to `.env` and set the values for the sele
 6. Create the webhook tool from `elevenlabs/escalate-to-human-tool.example.json`; its URL is `/escalate` by default. Use `/studio_escalate` for Pattern A or `/direct_transfer` to force Pattern C.
 7. Attach the webhook tool to the agent through the current ElevenLabs `tool_ids` mechanism.
 8. Paste the instructions from `elevenlabs/agent-prompt.md` into the agent prompt.
-9. Use the ElevenLabs test console to confirm the tool receives the dynamic `parentCallSid` value before testing a real Twilio call.
+9. Use the ElevenLabs test console to confirm the dynamic variable `parent_call_sid` resolves and the webhook tool sends it to Twilio in the request-body field `parentCallSid` before testing a real call.
 
 Use the custom webhook tool with `register-call` as the primary architecture. ElevenLabs native `transfer_to_number` is an alternate convenience path only; it does not provide the same Twilio-owned routing control.
 

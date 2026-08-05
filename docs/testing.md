@@ -14,7 +14,7 @@ npm test
 
 1. Deploy Twilio Functions.
 2. Point the Twilio number Voice webhook to `/voice`.
-3. Configure the ElevenLabs agent webhook tool to call `/escalate`.
+3. Configure the ElevenLabs agent webhook tool to call `/escalate` with `Authorization: Bearer <HANDOFF_TOKEN>`.
 4. Set `ROUTING_MODE=taskrouter`.
 5. Call the Twilio number.
 6. Ask for a human.
