@@ -30,4 +30,4 @@ The test was written before implementation. The first run failed because the pac
 
 ## Commit
 
-Final commit: `44e293c chore: scaffold Twilio serverless project`
+Scaffold commit: `8453211 chore: scaffold Twilio serverless project`
