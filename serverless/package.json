@@ -1,0 +1,19 @@
+{
+  "name": "twilio-elevenlabs-handoff-blueprint",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --runInBand",
+    "deploy": "twilio serverless:deploy --service-name \"$TWILIO_SERVERLESS_SERVICE_NAME\" --env .env --override-existing-project"
+  },
+  "dependencies": {
+    "twilio": "^5.4.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"]
+  }
+}
