@@ -22,7 +22,7 @@ function createHandler(dependencies = {}) {
   return async function handler(context, event, callback) {
     try {
       const config = loadConfig(context);
-      validateBearerToken((context.request && context.request.headers) || {}, config.handoffToken);
+      validateBearerToken((event.request && event.request.headers) || {}, config.handoffToken);
       const payload = normalizeHandoffPayload(event);
       const twiml = buildStudioReturnTwiML(config, payload);
       await updateCallWithTwiML(createTwilioClient(config), payload.parentCallSid, twiml);

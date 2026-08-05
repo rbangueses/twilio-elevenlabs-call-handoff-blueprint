@@ -43,9 +43,9 @@ test("/studio_escalate updates payload.parentCallSid when authorized", async () 
   const update = jest.fn().mockResolvedValue({});
   const dependencies = createDependencies(update);
   const callback = jest.fn();
-  const context = { request: { headers: { authorization: "Bearer secret" } } };
+  const event = { ...payload, request: { headers: { authorization: "Bearer secret" } } };
 
-  await createHandler(dependencies)(context, payload, callback);
+  await createHandler(dependencies)({}, event, callback);
 
   expect(dependencies.updateCallWithTwiML).toHaveBeenCalledWith(
     expect.any(Object),
@@ -63,9 +63,9 @@ test("/studio_escalate does not update a call when unauthorized", async () => {
   const update = jest.fn().mockResolvedValue({});
   const dependencies = createDependencies(update);
   const callback = jest.fn();
-  const context = { request: { headers: { authorization: "Bearer wrong" } } };
+  const event = { ...payload, request: { headers: { authorization: "Bearer wrong" } } };
 
-  await createHandler(dependencies)(context, payload, callback);
+  await createHandler(dependencies)({}, event, callback);
 
   expect(dependencies.updateCallWithTwiML).not.toHaveBeenCalled();
   expect(callback).toHaveBeenCalledWith(null, { ok: false, error: "Unauthorized" });
