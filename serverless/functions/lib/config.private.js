@@ -36,4 +36,8 @@ function requireEnv(config, keys) {
   }
 }
 
-module.exports = { loadConfig, requireEnv };
+function isTaskrouterWorkflowSid(value) {
+  return /^WW[0-9a-fA-F]{32}$/.test(value || "");
+}
+
+module.exports = { loadConfig, requireEnv, isTaskrouterWorkflowSid };
