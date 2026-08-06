@@ -5,7 +5,7 @@
     "url": "https://{{system__env_handoff_host}}/escalate",
     "method": "POST",
     "request_headers": {
-      "authorization": "Bearer {{secret__handoff_token}}",
+      "authorization": { "env_var_label": "handoff_authorization" },
       "content-type": "application/json"
     },
     "request_body_schema": {
