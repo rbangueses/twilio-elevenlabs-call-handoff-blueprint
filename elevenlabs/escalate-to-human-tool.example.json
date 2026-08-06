@@ -1,6 +1,10 @@
 {
   "name": "escalate_to_human",
   "description": "Escalate the active phone call to a human agent using Twilio. Use this only when the caller needs a human or the automation cannot safely continue.",
+  "pre_tool_speech": "force",
+  "execution_mode": "post_tool_speech",
+  "interruption_mode": "disable_during_tool",
+  "response_timeout_secs": 20,
   "api_schema": {
     "url": "https://{{system__env_handoff_host}}/escalate",
     "method": "POST",
