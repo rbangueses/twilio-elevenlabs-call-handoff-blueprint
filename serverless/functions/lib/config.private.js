@@ -6,14 +6,9 @@ function loadConfig(env) {
     elevenlabsApiKey: env.ELEVENLABS_API_KEY || "",
     elevenlabsAgentId: env.ELEVENLABS_AGENT_ID || "",
     handoffToken: env.HANDOFF_TOKEN || "",
-    routingMode: env.ROUTING_MODE || "taskrouter",
     flexWorkflowSid: env.FLEX_WORKFLOW_SID || "",
     taskrouterWaitUrl: env.TASKROUTER_WAIT_URL || "",
     studioFlowWebhookUrl: env.STUDIO_FLOW_WEBHOOK_URL || "",
-    directTransferMode: env.DIRECT_TRANSFER_MODE || "warm_conference",
-    directTransferTo: env.DIRECT_TRANSFER_TO || "",
-    directTransferFrom: env.DIRECT_TRANSFER_FROM || env.TWILIO_PHONE_NUMBER || "",
-    directHoldUrl: env.DIRECT_HOLD_URL || "http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical",
   };
 }
 
@@ -26,7 +21,6 @@ const ENV_TO_CONFIG = {
   HANDOFF_TOKEN: "handoffToken",
   FLEX_WORKFLOW_SID: "flexWorkflowSid",
   STUDIO_FLOW_WEBHOOK_URL: "studioFlowWebhookUrl",
-  DIRECT_TRANSFER_TO: "directTransferTo",
 };
 
 function requireEnv(config, keys) {

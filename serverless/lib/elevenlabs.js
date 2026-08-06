@@ -1,11 +1,10 @@
-function buildConversationClientData(event, routingMode) {
+function buildConversationClientData(event) {
   const parentCallSid = event.CallSid;
   return {
     type: "conversation_initiation_client_data",
     dynamic_variables: {
       parent_call_sid: parentCallSid,
       handoff_id: event.HandoffId || parentCallSid,
-      routing_mode: routingMode,
       caller_number: event.From || "",
       called_number: event.To || "",
     },

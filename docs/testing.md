@@ -15,11 +15,10 @@ npm test
 1. Deploy Twilio Functions.
 2. Point the Twilio number Voice webhook to `/voice`.
 3. Configure the ElevenLabs agent webhook tool to call `/escalate` with `Authorization: Bearer <HANDOFF_TOKEN>`.
-4. Set `ROUTING_MODE=taskrouter`.
-5. Call the Twilio number.
-6. Ask for a human.
-7. Confirm the original Call is updated with `<Enqueue>`.
-8. Confirm Flex or your TaskRouter assignment callback receives task attributes with `reason=ai_escalation`, `summary`, `intent`, `parentCallSid`, and `handoffId`.
+4. Call the Twilio number.
+5. Ask for a human.
+6. Confirm the original Call is updated with `<Enqueue>`.
+7. Confirm Flex or your TaskRouter assignment callback receives task attributes with `reason=ai_escalation`, `summary`, `intent`, `parentCallSid`, and `handoffId`.
 
 ## Pattern A: Studio Test
 
@@ -28,14 +27,6 @@ npm test
 3. Configure the ElevenLabs tool URL as `/studio_escalate` with `Authorization: Bearer <HANDOFF_TOKEN>`.
 4. Call the number and request a human.
 5. Confirm the original parent Call redirects to the Studio webhook with `FlowEvent=return` and the Flow continues to Send to Flex.
-
-## Pattern C: Direct Voice Test
-
-1. Set `ROUTING_MODE=direct`, `DIRECT_TRANSFER_TO`, and either `DIRECT_TRANSFER_MODE=cold_dial` or `DIRECT_TRANSFER_MODE=warm_conference`.
-2. Point the Twilio number Voice webhook to `/voice`.
-3. Configure the ElevenLabs tool to call `/escalate` or `/direct_transfer` with `Authorization: Bearer <HANDOFF_TOKEN>`.
-4. Call the number and request a human.
-5. Confirm the original parent Call receives Dial or Conference TwiML and the configured human destination is reached.
 
 ## Pre-Production Checks
 

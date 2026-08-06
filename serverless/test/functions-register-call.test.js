@@ -7,7 +7,6 @@ function testDependencies() {
     loadConfig: (context) => ({
       elevenlabsApiKey: context.ELEVENLABS_API_KEY,
       elevenlabsAgentId: context.ELEVENLABS_AGENT_ID,
-      routingMode: context.ROUTING_MODE,
     }),
     buildConversationClientData: jest.fn(() => ({ dynamic_variables: {} })),
     registerTwilioCall: jest.fn().mockResolvedValue("<Response><Connect /></Response>"),
@@ -20,7 +19,6 @@ const context = {
   ELEVENLABS_AGENT_ID: "agent_123",
   ELEVENLABS_API_KEY: "xi_test",
   HANDOFF_TOKEN: "secret",
-  ROUTING_MODE: "taskrouter",
 };
 const event = {
   CallSid: "CA1234567890abcdef1234567890abcdef",
@@ -38,17 +36,17 @@ test("/voice returns ElevenLabs TwiML as XML", async () => {
   expect(dependencies.registerTwilioCall).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({
     direction: "inbound",
   }));
-  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event, "taskrouter");
+  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event);
 });
 
-test("/studio_voice forces studio routing metadata", async () => {
+test("/studio_voice uses the same parent call metadata shape", async () => {
   const callback = jest.fn();
   const dependencies = testDependencies();
 
   await createStudioVoiceHandler(dependencies)(context, event, callback);
 
   expect(callback.mock.calls[0][1].toString()).toContain("<Response>");
-  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event, "studio");
+  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event);
 });
 
 test("/outbound registers outbound Twilio calls", async () => {

@@ -8,9 +8,7 @@ exports.handler = function handler(context, event, callback) {
   const config = loadConfig(context);
   callback(null, {
     ok: Boolean(config.elevenlabsAgentId && config.handoffToken),
-    routingMode: config.routingMode,
     hasTaskrouter: isTaskrouterWorkflowSid(config.flexWorkflowSid),
     hasStudio: Boolean(config.studioFlowWebhookUrl),
-    hasDirectTransfer: Boolean(config.directTransferTo),
   });
 };

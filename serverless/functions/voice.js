@@ -31,7 +31,7 @@ function createHandler(dependencies = {}) {
         fromNumber: event.From,
         toNumber: event.To,
         direction: "inbound",
-        conversationInitiationClientData: buildConversationClientData(event, config.routingMode),
+        conversationInitiationClientData: buildConversationClientData(event),
       });
       callback(null, createXmlResponse(twiml));
     } catch (error) {

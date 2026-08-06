@@ -17,7 +17,6 @@
       "properties": {
         "parentCallSid": { "type": "string", "dynamic_variable": "parent_call_sid" },
         "handoffId": { "type": "string", "dynamic_variable": "handoff_id" },
-        "routingMode": { "type": "string", "dynamic_variable": "routing_mode" },
         "intent": { "type": "string", "description": "Snake_case routing intent." },
         "reason": { "type": "string", "description": "Escalation reason code." },
         "summary": { "type": "string", "description": "Concise handoff summary for the human." },

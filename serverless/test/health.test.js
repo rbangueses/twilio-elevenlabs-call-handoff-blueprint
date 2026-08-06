@@ -16,9 +16,9 @@ test("health does not report TaskRouter ready for a Studio Flow SID", async () =
   const response = await invokeHealth({
     ELEVENLABS_AGENT_ID: "agent_123",
     HANDOFF_TOKEN: "secret",
-    ROUTING_MODE: "taskrouter",
     FLEX_WORKFLOW_SID: "FW00000000000000000000000000000000",
   });
 
   expect(response.hasTaskrouter).toBe(false);
+  expect(Object.keys(response).sort()).toEqual(["hasStudio", "hasTaskrouter", "ok"]);
 });

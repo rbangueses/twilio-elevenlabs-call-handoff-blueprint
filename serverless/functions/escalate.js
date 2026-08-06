@@ -16,9 +16,6 @@ function createHandler(dependencies = {}) {
   const validateBearerToken = dependencies.validateBearerToken || authModule.validateBearerToken;
   const normalizeHandoffPayload = dependencies.normalizeHandoffPayload || handoffModule.normalizeHandoffPayload;
   const buildTaskrouterTwiML = dependencies.buildTaskrouterTwiML || handoffModule.buildTaskrouterTwiML;
-  const buildColdDirectTwiML = dependencies.buildColdDirectTwiML || handoffModule.buildColdDirectTwiML;
-  const buildCallerConferenceTwiML = dependencies.buildCallerConferenceTwiML || handoffModule.buildCallerConferenceTwiML;
-  const createWarmTransferCall = dependencies.createWarmTransferCall || handoffModule.createWarmTransferCall;
   const createTwilioClient = dependencies.createTwilioClient || twilioClientModule.createTwilioClient;
   const updateCallWithTwiML = dependencies.updateCallWithTwiML || twilioClientModule.updateCallWithTwiML;
 
@@ -28,22 +25,10 @@ function createHandler(dependencies = {}) {
       validateBearerToken((event.request && event.request.headers) || {}, config.handoffToken);
       const payload = normalizeHandoffPayload(event);
       const client = createTwilioClient(config);
-      let twiml;
-      let route = "taskrouter";
-
-      if (config.routingMode === "direct" && config.directTransferMode === "cold_dial") {
-        twiml = buildColdDirectTwiML(config, payload);
-        route = "direct";
-      } else if (config.routingMode === "direct" && config.directTransferMode === "warm_conference") {
-        twiml = buildCallerConferenceTwiML(config, payload);
-        await createWarmTransferCall(client, config, payload);
-        route = "direct";
-      } else {
-        twiml = buildTaskrouterTwiML(config, payload);
-      }
+      const twiml = buildTaskrouterTwiML(config, payload);
 
       await updateCallWithTwiML(client, payload.parentCallSid, twiml);
-      callback(null, { ok: true, route, handoffId: payload.handoffId });
+      callback(null, { ok: true, route: "taskrouter", handoffId: payload.handoffId });
     } catch (error) {
       callback(null, { ok: false, error: error.message });
     }

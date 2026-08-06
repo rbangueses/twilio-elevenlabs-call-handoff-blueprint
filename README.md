@@ -4,7 +4,7 @@ Conversational AI agents need a clean way to escalate to a human when they canno
 
 This repo is a working blueprint for handing an active phone call from an ElevenLabs Conversational AI agent back to Twilio, then routing that caller to a human with context. The tested destinations are Twilio Studio, TaskRouter, and Flex. The core pattern is broader: pass the original Twilio parent `CallSid` into ElevenLabs as a dynamic variable, let the ElevenLabs agent decide when to escalate, then update that original Twilio Call resource with the next TwiML instruction.
 
-Flex is the reference human-agent destination in this repo. Pattern A uses Studio to resume the journey and then Send to Flex. Pattern B sends the caller directly to TaskRouter/Flex with `<Enqueue>`. The same parent-call update pattern can be adapted to another TaskRouter-powered contact center or a custom Programmable Voice app.
+Flex is the reference human-agent destination in this repo. Pattern A uses Studio to resume the journey and then Send to Flex. Pattern B sends the caller directly to TaskRouter/Flex with `<Enqueue>`. The same parent-call update pattern can be adapted to another TaskRouter-powered contact center.
 
 This blueprint intentionally uses ElevenLabs `register-call` and a custom ElevenLabs webhook tool. It does not rely on ElevenLabs native `transfer_to_number` as the primary path, because native transfer is best for simple blind transfer to a configured phone number or SIP URI. The goal here is Twilio-owned routing with handoff context: summary, intent, reason, original caller, original called number, parent call SID, and handoff ID.
 
@@ -106,7 +106,6 @@ ELEVENLABS_API_KEY=replace_with_xi_api_key
 ELEVENLABS_AGENT_ID=agent_xxxxxxxxxxxxxxxxxxxxxxxx
 
 HANDOFF_TOKEN=replace_with_long_random_token
-ROUTING_MODE=taskrouter
 
 FLEX_WORKFLOW_SID=WWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TASKROUTER_WAIT_URL=
@@ -147,10 +146,8 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "routingMode": "taskrouter",
   "hasTaskrouter": true,
-  "hasStudio": true,
-  "hasDirectTransfer": false
+  "hasStudio": true
 }
 ```
 
@@ -170,7 +167,6 @@ Add these dynamic variable placeholders to the agent:
 ```text
 parent_call_sid
 handoff_id
-routing_mode
 caller_number
 called_number
 ```
@@ -183,7 +179,6 @@ The `/voice` and `/studio_voice` Functions set those values through ElevenLabs `
   "dynamic_variables": {
     "parent_call_sid": "CA...",
     "handoff_id": "CA...",
-    "routing_mode": "taskrouter",
     "caller_number": "+15551230000",
     "called_number": "+15551239999"
   }
@@ -192,7 +187,7 @@ The `/voice` and `/studio_voice` Functions set those values through ElevenLabs `
 
 `parent_call_sid` is the original inbound Twilio Call SID. It is the value the escalation Function updates. `handoff_id` is a correlation field for Flex attributes, logs, and analytics. The sample defaults it to the parent call SID if no separate handoff ID is provided.
 
-Paste [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md) into the agent prompt. If you use two tools in one agent, adjust the prompt so the agent calls the Studio tool when `{{routing_mode}}` is `studio` and the TaskRouter tool when `{{routing_mode}}` is `taskrouter`.
+Paste [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md) into the agent prompt. If you want to test both Pattern A and Pattern B with the same ElevenLabs agent, attach both tools and make their names/descriptions explicit enough for the model to choose the right one in that test. For the simplest reproduction, use one agent/tool configuration per pattern.
 
 ### 3.3 Configure the ElevenLabs Tool
 
@@ -242,7 +237,6 @@ Use the ElevenLabs test console to confirm the tool request body contains:
 {
   "parentCallSid": "CA...",
   "handoffId": "CA...",
-  "routingMode": "taskrouter",
   "intent": "account_access",
   "reason": "explicit_request",
   "summary": "Concise handoff summary",
@@ -381,7 +375,7 @@ For Pattern B, the ElevenLabs handoff tool must call:
 https://{{system__env_handoff_host}}/escalate
 ```
 
-Set `ROUTING_MODE=taskrouter` and configure `FLEX_WORKFLOW_SID=WW...` in `serverless/.env`, then redeploy.
+Configure `FLEX_WORKFLOW_SID=WW...` in `serverless/.env`, then redeploy.
 
 ## 6. Native ElevenLabs Transfer
 

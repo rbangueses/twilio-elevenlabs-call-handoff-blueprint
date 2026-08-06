@@ -35,9 +35,9 @@ test("updateCallWithTwiML updates the specified call", async () => {
   expect(update).toHaveBeenCalledWith({ twiml: "<Response />" });
 });
 
-function createDependencies(update) {
+function createDependencies(update, configOverrides = {}) {
   return {
-    loadConfig: () => ({ handoffToken: "secret", flexWorkflowSid: workflowSid }),
+    loadConfig: () => ({ handoffToken: "secret", flexWorkflowSid: workflowSid, ...configOverrides }),
     validateBearerToken: jest.fn((headers, expectedToken) => {
       if (headers.authorization !== `Bearer ${expectedToken}`) {
         throw new Error("Unauthorized");
@@ -63,6 +63,22 @@ test("/escalate updates the original parent call with Enqueue TwiML when authori
     parentCallSid,
     "<Response><Enqueue /></Response>",
   );
+  expect(callback).toHaveBeenCalledWith(null, {
+    ok: true,
+    route: "taskrouter",
+    handoffId: "handoff-1",
+  });
+});
+
+test("/escalate always uses TaskRouter routing", async () => {
+  const update = jest.fn().mockResolvedValue({});
+  const dependencies = createDependencies(update);
+  const callback = jest.fn();
+  const event = { ...payload, request: { headers: { authorization: "Bearer secret" } } };
+
+  await createHandler(dependencies)({}, event, callback);
+
+  expect(dependencies.buildTaskrouterTwiML).toHaveBeenCalled();
   expect(callback).toHaveBeenCalledWith(null, {
     ok: true,
     route: "taskrouter",

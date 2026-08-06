@@ -53,58 +53,6 @@ function buildTaskrouterTwiML(config, payload) {
   return response.toString();
 }
 
-function buildColdDirectTwiML(config) {
-  const { VoiceResponse } = require("twilio").twiml;
-  if (!config.directTransferTo) {
-    throw new Error("DIRECT_TRANSFER_TO is required for direct transfer");
-  }
-
-  const response = new VoiceResponse();
-  response.dial(config.directTransferTo);
-  return response.toString();
-}
-
-function safeConferenceName(parentCallSid) {
-  if (!CALL_SID.test(parentCallSid)) {
-    throw new Error("Invalid parentCallSid");
-  }
-
-  return `handoff-${parentCallSid}`;
-}
-
-function buildCallerConferenceTwiML(config, payload) {
-  const { VoiceResponse } = require("twilio").twiml;
-  const response = new VoiceResponse();
-  response.say("I am connecting you to a specialist now.");
-  const dial = response.dial();
-  dial.conference({
-    startConferenceOnEnter: true,
-    endConferenceOnExit: true,
-    waitUrl: config.directHoldUrl,
-  }, safeConferenceName(payload.parentCallSid));
-  return response.toString();
-}
-
-function buildHumanWarmJoinTwiML(config, payload) {
-  const { VoiceResponse } = require("twilio").twiml;
-  const response = new VoiceResponse();
-  response.say(`Warm transfer summary. ${payload.summary}`);
-  const dial = response.dial();
-  dial.conference({
-    startConferenceOnEnter: true,
-    endConferenceOnExit: false,
-  }, safeConferenceName(payload.parentCallSid));
-  return response.toString();
-}
-
-async function createWarmTransferCall(client, config, payload) {
-  await client.calls.create({
-    to: config.directTransferTo,
-    from: config.directTransferFrom,
-    twiml: buildHumanWarmJoinTwiML(config, payload),
-  });
-}
-
 function buildStudioReturnTwiML(config, payload) {
   const { VoiceResponse } = require("twilio").twiml;
   if (!config.studioFlowWebhookUrl) {
@@ -129,9 +77,5 @@ module.exports = {
   normalizeHandoffPayload,
   buildTaskAttributes,
   buildTaskrouterTwiML,
-  buildColdDirectTwiML,
-  buildCallerConferenceTwiML,
-  buildHumanWarmJoinTwiML,
-  createWarmTransferCall,
   buildStudioReturnTwiML,
 };

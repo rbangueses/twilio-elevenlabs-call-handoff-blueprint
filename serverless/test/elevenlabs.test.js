@@ -5,11 +5,16 @@ test("buildConversationClientData includes handoff metadata as dynamic variables
     CallSid: "CA1234567890abcdef1234567890abcdef",
     From: "+15551230000",
     To: "+15551239999",
-  }, "taskrouter");
+  });
 
   expect(data.dynamic_variables.parent_call_sid).toBe("CA1234567890abcdef1234567890abcdef");
   expect(data.dynamic_variables.handoff_id).toBe("CA1234567890abcdef1234567890abcdef");
-  expect(data.dynamic_variables.routing_mode).toBe("taskrouter");
+  expect(Object.keys(data.dynamic_variables).sort()).toEqual([
+    "called_number",
+    "caller_number",
+    "handoff_id",
+    "parent_call_sid",
+  ]);
 });
 
 test("registerTwilioCall returns TwiML from ElevenLabs", async () => {
