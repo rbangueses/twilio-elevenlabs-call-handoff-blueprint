@@ -8,6 +8,11 @@ Flex is the reference human-agent destination in this repo. Pattern A uses Studi
 
 This blueprint intentionally uses ElevenLabs `register-call` and a custom ElevenLabs webhook tool. It does not rely on ElevenLabs native `transfer_to_number` as the primary path, because native transfer is best for simple blind transfer to a configured phone number or SIP URI. The goal here is Twilio-owned routing with handoff context: summary, intent, reason, original caller, original called number, parent call SID, and handoff ID.
 
+The repo has been exercised end to end with both included handoff paths:
+
+- **Studio path:** Twilio number starts a Studio Flow, Studio calls `/studio_voice`, ElevenLabs calls `/studio_escalate`, and the call returns to the same Studio execution before Send to Flex.
+- **TaskRouter path:** Twilio number calls `/voice`, ElevenLabs calls `/escalate`, and the original parent call is updated with `<Enqueue>` for Flex or another TaskRouter-powered contact center.
+
 > **Proof of concept.** This blueprint is intended as a working reference implementation, not a production drop-in. Before using it in production, adapt the routing, authentication, prompts, observability, error handling, security controls, data-retention behavior, and compliance posture to your use case.
 
 ## Index
@@ -217,6 +222,14 @@ Create the webhook tool from [elevenlabs/escalate-to-human-tool.example.json](el
 
 Those settings let the agent finish the transfer sentence before the webhook updates the Twilio call.
 
+If you edit the tool in the ElevenLabs UI, re-check these timing fields before testing. The URL can be changed without changing the body schema, but the UI may reset timing fields to immediate execution. Immediate execution can cut off the agent's transfer sentence because Twilio updates the live call as soon as the tool runs.
+
+Also keep the body-parameters description populated. The included tool example sets it to:
+
+```text
+Payload sent to Twilio when the caller needs a human. Dynamic variables identify the original Twilio parent call, and LLM-generated fields provide concise escalation context for the receiving agent.
+```
+
 For **Pattern B**, use the default URL:
 
 ```text
@@ -311,6 +324,14 @@ The Send to Flex widget uses task attributes returned from the TwiML Redirect wi
 Keep `summary` and `description` short. They become TaskRouter attributes.
 
 Save and publish the Studio Flow. Copy the Flow webhook URL into `STUDIO_FLOW_WEBHOOK_URL` in `serverless/.env`, then redeploy the Functions so `/studio_escalate` can return the active call to that Flow.
+
+`STUDIO_FLOW_WEBHOOK_URL` must be the published Studio Flow webhook URL from Studio, not the `/studio_voice` Function URL and not the placeholder value from `.env.example`. It should look like:
+
+```text
+https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+If this value still contains placeholder `ACxxxxxxxx...` or `FWxxxxxxxx...`, Twilio will redirect the live call to a missing Flow and the caller may hear "We are sorry, an application error has occurred."
 
 ### 4.2 Configure the Twilio Number
 
@@ -450,6 +471,12 @@ Fetch recent Function logs:
 ```bash
 twilio serverless:logs --service-sid ZSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --environment dev -o json
 ```
+
+### Common troubleshooting
+
+If the agent says the transfer sentence and then the call fails with Twilio's generic application-error message, inspect the call events and confirm `/studio_escalate` redirected to a real `STUDIO_FLOW_WEBHOOK_URL`. A 404 from a `webhooks.twilio.com/.../Flows/FW...` URL usually means the env var still points to a placeholder or unpublished/missing Flow.
+
+If the agent starts saying the transfer sentence but gets cut off, inspect the ElevenLabs tool configuration and restore `pre_tool_speech=force`, `execution_mode=post_tool_speech`, and `interruption_mode=disable_during_tool`.
 
 ## 9. Display Task Attributes in Flex
 
