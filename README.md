@@ -222,7 +222,19 @@ label: handoff_authorization
 production value: Bearer <HANDOFF_TOKEN>
 ```
 
-Create the webhook tool from [elevenlabs/escalate-to-human-tool.example.json](elevenlabs/escalate-to-human-tool.example.json). The example includes the timing settings used for voice handoff:
+Create the webhook tool from [elevenlabs/escalate-to-human-tool.example.json](elevenlabs/escalate-to-human-tool.example.json). This file uses the ElevenLabs Tools API `tool_config` shape. To create the tool through the API, wrap it in a `tool_config` object:
+
+```bash
+jq '{ tool_config: . }' ../elevenlabs/escalate-to-human-tool.example.json > /tmp/escalate-to-human-tool.request.json
+curl -X POST https://api.elevenlabs.io/v1/convai/tools \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" \
+  -H "content-type: application/json" \
+  --data @/tmp/escalate-to-human-tool.request.json
+```
+
+If you create the tool in the ElevenLabs UI, use the JSON file as a reference and fill the form fields manually. The UI's "edit JSON" panel can use an internal form-state shape where headers, path params, query params, and body properties are arrays; pasting the API JSON there can produce validation errors such as "expected array" for `request_headers` or `request_body_schema.properties`.
+
+The example includes the timing settings used for voice handoff:
 
 ```json
 {
@@ -457,7 +469,19 @@ Unlike the LiveKit version of this blueprint, the ElevenLabs Memory path does no
 
 ### 6.3 Add the ElevenLabs Memory Tool
 
-Create the webhook tool from [elevenlabs/recall-customer-memory-tool.example.json](elevenlabs/recall-customer-memory-tool.example.json). It calls:
+Create the webhook tool from [elevenlabs/recall-customer-memory-tool.example.json](elevenlabs/recall-customer-memory-tool.example.json). This file uses the ElevenLabs Tools API `tool_config` shape. To create the tool through the API, wrap it in a `tool_config` object:
+
+```bash
+jq '{ tool_config: . }' ../elevenlabs/recall-customer-memory-tool.example.json > /tmp/recall-customer-memory-tool.request.json
+curl -X POST https://api.elevenlabs.io/v1/convai/tools \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" \
+  -H "content-type: application/json" \
+  --data @/tmp/recall-customer-memory-tool.request.json
+```
+
+If you create the tool in the ElevenLabs UI, use the JSON file as a reference and fill the form fields manually. The UI's "edit JSON" panel can use a different internal shape than the public API.
+
+The tool calls:
 
 ```text
 https://{{system__env_handoff_host}}/memory_recall
