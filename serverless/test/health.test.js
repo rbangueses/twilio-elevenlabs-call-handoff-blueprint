@@ -20,5 +20,16 @@ test("health does not report TaskRouter ready for a Studio Flow SID", async () =
   });
 
   expect(response.hasTaskrouter).toBe(false);
-  expect(Object.keys(response).sort()).toEqual(["hasStudio", "hasTaskrouter", "ok"]);
+  expect(response.hasMemory).toBe(false);
+  expect(Object.keys(response).sort()).toEqual(["hasMemory", "hasStudio", "hasTaskrouter", "ok"]);
+});
+
+test("health reports Memory ready when a Memory Store ID is configured", async () => {
+  const response = await invokeHealth({
+    ELEVENLABS_AGENT_ID: "agent_123",
+    HANDOFF_TOKEN: "secret",
+    MEMORY_STORE_ID: "mem_store_0123456789abcdefghijklmnop",
+  });
+
+  expect(response.hasMemory).toBe(true);
 });

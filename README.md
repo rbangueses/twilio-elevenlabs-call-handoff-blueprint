@@ -25,11 +25,12 @@ The repo has been exercised end to end with both included handoff paths:
   - [3.3 Configure the ElevenLabs Tool](#33-configure-the-elevenlabs-tool)
 - [4. Pattern A Setup: Using Studio](#4-pattern-a-setup-using-studio)
 - [5. Pattern B Setup: Using TaskRouter](#5-pattern-b-setup-using-taskrouter)
-- [6. Native ElevenLabs Transfer](#6-native-elevenlabs-transfer)
-- [7. How the Patterns Target the Right Call](#7-how-the-patterns-target-the-right-call)
-- [8. Test End to End](#8-test-end-to-end)
-- [9. Display Task Attributes in Flex](#9-display-task-attributes-in-flex)
-- [10. Local Checks](#10-local-checks)
+- [6. Optional Conversation Memory](#6-optional-conversation-memory)
+- [7. Native ElevenLabs Transfer](#7-native-elevenlabs-transfer)
+- [8. How the Patterns Target the Right Call](#8-how-the-patterns-target-the-right-call)
+- [9. Test End to End](#9-test-end-to-end)
+- [10. Display Task Attributes in Flex](#10-display-task-attributes-in-flex)
+- [11. Local Checks](#11-local-checks)
 
 ## 1. Prerequisites
 
@@ -116,6 +117,14 @@ FLEX_WORKFLOW_SID=WWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TASKROUTER_WAIT_URL=
 
 STUDIO_FLOW_WEBHOOK_URL=https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Optional Conversation Memory.
+MEMORY_STORE_ID=
+MEMORY_ID_TYPE=phone
+MEMORY_RECALL_OBSERVATIONS_LIMIT=5
+MEMORY_RECALL_SUMMARIES_LIMIT=2
+MEMORY_RECALL_RELEVANCE_THRESHOLD=
+MEMORY_RECALL_LOOKBACK_DAYS=
 ```
 
 `FLEX_WORKFLOW_SID` is required for Pattern B. `STUDIO_FLOW_WEBHOOK_URL` is required for Pattern A. If you create the Studio Flow after the first Function deployment, add the Flow webhook URL to `serverless/.env` and deploy again.
@@ -137,6 +146,7 @@ https://your-functions-service-1234.twil.io/studio_voice
 https://your-functions-service-1234.twil.io/studio_escalate
 https://your-functions-service-1234.twil.io/voice
 https://your-functions-service-1234.twil.io/escalate
+https://your-functions-service-1234.twil.io/memory_recall
 https://your-functions-service-1234.twil.io/health
 ```
 
@@ -152,11 +162,13 @@ Expected shape:
 {
   "ok": true,
   "hasTaskrouter": true,
-  "hasStudio": true
+  "hasStudio": true,
+  "hasMemory": false
 }
 ```
 
 The `hasTaskrouter` value only reports `true` when `FLEX_WORKFLOW_SID` looks like a `WW...` TaskRouter Workflow SID.
+The `hasMemory` value reports whether `MEMORY_STORE_ID` is configured.
 
 ### 3.2 Configure the ElevenLabs Agent
 
@@ -398,7 +410,125 @@ https://{{system__env_handoff_host}}/escalate
 
 Configure `FLEX_WORKFLOW_SID=WW...` in `serverless/.env`, then redeploy.
 
-## 6. Native ElevenLabs Transfer
+## 6. Optional Conversation Memory
+
+Use Twilio Conversation Memory when you want the ElevenLabs agent to access relevant customer context from prior conversations while keeping the same Studio or TaskRouter handoff mechanics. This is an optional overlay on Pattern A or Pattern B; choose the base routing pattern first, then add Memory.
+
+The main use case is continuity. The caller should not have to repeat what happened last time. Memory can give the ElevenLabs agent relevant prior observations, summaries, preferences, or open issues so it can personalize the conversation and create a better escalation summary.
+
+A second use case is cross-channel context. If the customer previously interacted over SMS, WhatsApp, RCS, chat, voice, or another captured Twilio channel, Conversation Orchestrator can group those communications into conversations and link them to a Memory profile. The ElevenLabs agent can then call the Memory recall tool during the voice call.
+
+Before enabling this path, create a Twilio Conversation Memory Store and make sure the store can resolve profiles by phone number. In production, the usual pattern is to link that store to a Conversation Orchestrator configuration so passive capture can write observations and summaries after conversations complete. You can also write observations, summaries, or traits directly through the Memory API.
+
+### 6.1 Memory, Orchestrator, and Conversation Intelligence
+
+In this blueprint, the Memory path assumes Twilio Conversation Orchestrator is configured for capture and profile resolution. Orchestrator is the layer that turns voice and messaging traffic into normalized conversations, links those conversations to a Memory Store, and can also attach Conversation Intelligence configurations.
+
+Conversation Memory and Conversation Intelligence are independent capabilities. Memory stores and recalls customer context. Conversation Intelligence analyzes conversations for real-time or post-conversation signals such as summaries, sentiment, next-best-response, QA, or custom operator outputs. They can be adopted separately, but both use Conversation Orchestrator as the conversation capture and configuration layer in this pattern.
+
+That means enabling the optional Memory path can also create the foundation for Conversation Intelligence. Once the same Conversation Orchestrator configuration is capturing the relevant voice or messaging traffic, you can attach an Intelligence configuration to run real-time or post-call analysis without changing the ElevenLabs handoff mechanics.
+
+Conversation Memory is not a HIPAA Eligible Service or PCI compliant. Do not use this optional path for workflows that require those controls without a separate compliance review.
+
+### 6.2 Configure Memory Values
+
+Add the Memory values to `serverless/.env`, then redeploy the Twilio Functions:
+
+```text
+MEMORY_STORE_ID=mem_store_xxxxxxxxxxxxxxxxxxxxxxxxxx
+MEMORY_ID_TYPE=phone
+MEMORY_RECALL_OBSERVATIONS_LIMIT=5
+MEMORY_RECALL_SUMMARIES_LIMIT=2
+MEMORY_RECALL_RELEVANCE_THRESHOLD=0.5
+MEMORY_RECALL_LOOKBACK_DAYS=30
+```
+
+`MEMORY_STORE_ID` is required for `/memory_recall`. In deployed Twilio Functions, the account SID and auth token are usually available as `ACCOUNT_SID` and `AUTH_TOKEN`, but this repo also supports explicit `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`.
+
+`MEMORY_RECALL_OBSERVATIONS_LIMIT`, `MEMORY_RECALL_SUMMARIES_LIMIT`, `MEMORY_RECALL_RELEVANCE_THRESHOLD`, and `MEMORY_RECALL_LOOKBACK_DAYS` are optional but useful for demos or shared test numbers. Small limits keep the voice agent response fast and keep unrelated old context out of the prompt.
+
+After redeploying, the Function Service exposes:
+
+```text
+https://your-functions-service-1234.twil.io/memory_recall
+```
+
+Unlike the LiveKit version of this blueprint, the ElevenLabs Memory path does not need separate `/voice_memory` or `/studio_voice_memory` entrypoints. `/voice` and `/studio_voice` already pass `caller_number` to ElevenLabs as a dynamic variable. The Memory tool sends that caller number to `/memory_recall`, and the Function resolves the Memory profile on demand.
+
+### 6.3 Add the ElevenLabs Memory Tool
+
+Create the webhook tool from [elevenlabs/recall-customer-memory-tool.example.json](elevenlabs/recall-customer-memory-tool.example.json). It calls:
+
+```text
+https://{{system__env_handoff_host}}/memory_recall
+```
+
+The tool uses the same ElevenLabs environment variables as the handoff tool:
+
+```text
+handoff_host=your-functions-service-1234.twil.io
+handoff_authorization=Bearer <HANDOFF_TOKEN>
+```
+
+The tool request body is:
+
+```json
+{
+  "callerNumber": "{{caller_number}}",
+  "query": "recent account access support context"
+}
+```
+
+The Function looks up the Memory profile by `callerNumber`, calls Recall for that profile, and returns:
+
+```json
+{
+  "ok": true,
+  "profileFound": true,
+  "profileId": "mem_profile_xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "memoryContext": "Relevant customer memory:\n- Caller previously reported password reset email delays.",
+  "observations": [],
+  "summaries": []
+}
+```
+
+If no profile is found, the response is still successful but `profileFound` is `false` and `memoryContext` is empty. The agent should continue normally.
+
+### 6.4 Add Memory Agent Instructions
+
+For testing and demos, add behavior like this to the ElevenLabs agent prompt so you can confirm the agent is accessing Memory successfully. In production, tune the trigger conditions and wording for your support flow:
+
+```text
+If prior customer context would help you avoid asking the caller to repeat themselves, call recall_customer_memory once after the caller describes their issue with a short query for recent, issue-related support context. Use relevant context quietly to ask a better follow-up question or create a better escalation summary. Ignore unrelated or stale memories. Do not mention internal memory systems to the caller, and do not rely on memory as proof of identity or authorization.
+
+If the caller asks what happened previously, what happened last time, or asks for a summary of a prior conversation, call recall_customer_memory with a query such as recent account access support context or recent account access conversation summary. Then summarize the relevant prior context in one or two sentences. Ignore unrelated or stale memories, even if they are returned. If no relevant prior context is found, say you do not see relevant previous context for this caller and continue helping normally.
+```
+
+Attach both tools to the ElevenLabs agent when testing Memory plus escalation:
+
+- `recall_customer_memory` for optional prior context.
+- `escalate_to_human` for Studio or TaskRouter handoff.
+
+### 6.5 Verify Memory Recall
+
+Use the ElevenLabs tool execution log or call `/memory_recall` directly with the same bearer token:
+
+```json
+{
+  "callerNumber": "+15551230000",
+  "query": "recent account access support context"
+}
+```
+
+If `profileFound` is `false`, confirm:
+
+- `MEMORY_STORE_ID` points to the Memory Store linked to your Conversation Orchestrator configuration.
+- The caller's phone number is present on a profile as the configured `MEMORY_ID_TYPE`.
+- The prior conversation has become inactive or closed so Memory extraction and indexing can complete.
+
+If `profileFound` is `true` but `memoryContext` is empty, try a more specific query, lower the relevance threshold, or wait for extraction/indexing to finish.
+
+## 7. Native ElevenLabs Transfer
 
 ElevenLabs includes native transfer capabilities such as `transfer_to_number`. Use the native tool when the target is simply a phone number or SIP URI and you do not need Twilio to receive the summary or route through Studio/Flex/TaskRouter with custom attributes.
 
@@ -408,7 +538,7 @@ This blueprint focuses on the custom webhook path because it preserves Twilio co
 - TaskRouter/Flex can receive structured task attributes.
 - The handoff Function updates the original parent Call resource, not a generated child leg.
 
-## 7. How the Patterns Target the Right Call
+## 8. How the Patterns Target the Right Call
 
 The important handoff detail is the parent call SID.
 
@@ -428,7 +558,7 @@ The escalation Function validates that it looks like a Twilio Call SID, then cal
 
 Do not substitute an ElevenLabs conversation ID, a child call SID, or a Flex task SID for `parentCallSid`.
 
-## 8. Test End to End
+## 9. Test End to End
 
 ### Pattern A: Studio
 
@@ -478,7 +608,7 @@ If the agent says the transfer sentence and then the call fails with Twilio's ge
 
 If the agent starts saying the transfer sentence but gets cut off, inspect the ElevenLabs tool configuration and restore `pre_tool_speech=force`, `execution_mode=post_tool_speech`, and `interruption_mode=disable_during_tool`.
 
-## 9. Display Task Attributes in Flex
+## 10. Display Task Attributes in Flex
 
 In Flex, inspect the active task attributes to confirm the handoff payload arrived:
 
@@ -505,7 +635,7 @@ Expected attributes include:
 }
 ```
 
-## 10. Local Checks
+## 11. Local Checks
 
 Install dependencies and run tests:
 
@@ -521,5 +651,7 @@ The test suite covers:
 - Handoff payload validation.
 - TaskRouter `<Enqueue>` TwiML generation.
 - Studio return `<Redirect>` generation.
+- Conversation Memory profile lookup and Recall request shape.
+- `/memory_recall` authorization and tool response shape.
 - Bearer-token validation.
 - `/health` checks for valid TaskRouter workflow SID shape.

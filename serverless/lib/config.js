@@ -9,6 +9,12 @@ function loadConfig(env) {
     flexWorkflowSid: env.FLEX_WORKFLOW_SID || "",
     taskrouterWaitUrl: env.TASKROUTER_WAIT_URL || "",
     studioFlowWebhookUrl: env.STUDIO_FLOW_WEBHOOK_URL || "",
+    memoryStoreId: env.MEMORY_STORE_ID || "",
+    memoryIdType: env.MEMORY_ID_TYPE || "phone",
+    memoryRecallObservationsLimit: numberValue(env.MEMORY_RECALL_OBSERVATIONS_LIMIT, 5),
+    memoryRecallSummariesLimit: numberValue(env.MEMORY_RECALL_SUMMARIES_LIMIT, 2),
+    memoryRecallRelevanceThreshold: optionalNumberValue(env.MEMORY_RECALL_RELEVANCE_THRESHOLD),
+    memoryRecallLookbackDays: optionalNumberValue(env.MEMORY_RECALL_LOOKBACK_DAYS),
   };
 }
 
@@ -21,6 +27,7 @@ const ENV_TO_CONFIG = {
   HANDOFF_TOKEN: "handoffToken",
   FLEX_WORKFLOW_SID: "flexWorkflowSid",
   STUDIO_FLOW_WEBHOOK_URL: "studioFlowWebhookUrl",
+  MEMORY_STORE_ID: "memoryStoreId",
 };
 
 function requireEnv(config, keys) {
@@ -32,6 +39,16 @@ function requireEnv(config, keys) {
 
 function isTaskrouterWorkflowSid(value) {
   return /^WW[0-9a-fA-F]{32}$/.test(value || "");
+}
+
+function numberValue(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalNumberValue(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 module.exports = { loadConfig, requireEnv, isTaskrouterWorkflowSid };

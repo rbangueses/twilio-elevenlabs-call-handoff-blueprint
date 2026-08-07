@@ -1,0 +1,32 @@
+{
+  "name": "recall_customer_memory",
+  "description": "Fetch relevant prior customer context from Twilio Conversation Memory. Use this only after the caller describes their current issue and prior context would help avoid repeated questions or improve the handoff summary.",
+  "pre_tool_speech": "auto",
+  "execution_mode": "immediate",
+  "interruption_mode": "allow",
+  "response_timeout_secs": 10,
+  "api_schema": {
+    "url": "https://{{system__env_handoff_host}}/memory_recall",
+    "method": "POST",
+    "request_headers": {
+      "authorization": { "env_var_label": "handoff_authorization" },
+      "content-type": "application/json"
+    },
+    "request_body_schema": {
+      "type": "object",
+      "description": "Payload sent to Twilio to recall relevant prior customer context. The caller number comes from Twilio dynamic variables, and the query should describe the current issue or prior context the agent needs.",
+      "properties": {
+        "callerNumber": {
+          "type": "string",
+          "description": "Original caller phone number used for Conversation Memory profile lookup.",
+          "dynamic_variable": "caller_number"
+        },
+        "query": {
+          "type": "string",
+          "description": "Short natural-language search query for relevant customer memories, based on the caller's current issue."
+        }
+      },
+      "required": ["callerNumber", "query"]
+    }
+  }
+}

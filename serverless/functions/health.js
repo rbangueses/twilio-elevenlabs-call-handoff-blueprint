@@ -10,5 +10,6 @@ exports.handler = function handler(context, event, callback) {
     ok: Boolean(config.elevenlabsAgentId && config.handoffToken),
     hasTaskrouter: isTaskrouterWorkflowSid(config.flexWorkflowSid),
     hasStudio: Boolean(config.studioFlowWebhookUrl),
+    hasMemory: Boolean(config.memoryStoreId),
   });
 };
