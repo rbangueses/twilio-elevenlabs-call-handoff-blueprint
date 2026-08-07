@@ -523,9 +523,3 @@ The test suite covers:
 - Studio return `<Redirect>` generation.
 - Bearer-token validation.
 - `/health` checks for valid TaskRouter workflow SID shape.
-
-## More Docs
-
-- [Setup](docs/setup.md)
-- [Architecture](docs/architecture.md)
-- [Testing](docs/testing.md)
