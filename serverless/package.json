@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "jest --runInBand",
+    "memory:create-profile": "node scripts/create-memory-profile.js",
     "deploy": "twilio serverless:deploy --service-name \"$TWILIO_SERVERLESS_SERVICE_NAME\" --env .env --override-existing-project"
   },
   "dependencies": {

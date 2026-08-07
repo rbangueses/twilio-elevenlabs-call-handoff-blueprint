@@ -121,6 +121,7 @@ STUDIO_FLOW_WEBHOOK_URL=https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxx
 # Optional Conversation Memory.
 MEMORY_STORE_ID=
 MEMORY_ID_TYPE=phone
+MEMORY_PROFILE_TRAIT_GROUP=Contact
 MEMORY_RECALL_OBSERVATIONS_LIMIT=5
 MEMORY_RECALL_SUMMARIES_LIMIT=2
 MEMORY_RECALL_RELEVANCE_THRESHOLD=
@@ -204,7 +205,7 @@ The `/voice` and `/studio_voice` Functions set those values through ElevenLabs `
 
 `parent_call_sid` is the original inbound Twilio Call SID. It is the value the escalation Function updates. `handoff_id` is a correlation field for Flex attributes, logs, and analytics. The sample defaults it to the parent call SID if no separate handoff ID is provided.
 
-Paste [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md) into the agent prompt. If you want to test both Pattern A and Pattern B with the same ElevenLabs agent, attach both tools and make their names/descriptions explicit enough for the model to choose the right one in that test. For the simplest reproduction, use one agent/tool configuration per pattern.
+Paste [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md) into the agent prompt. If you enable the optional Conversation Memory overlay, use [elevenlabs/agent-prompt-memory.md](elevenlabs/agent-prompt-memory.md) instead. If you want to test both Pattern A and Pattern B with the same ElevenLabs agent, attach both tools and make their names/descriptions explicit enough for the model to choose the right one in that test. For the simplest reproduction, use one agent/tool configuration per pattern.
 
 ### 3.3 Configure the ElevenLabs Tool
 
@@ -449,6 +450,7 @@ Add the Memory values to `serverless/.env`, then redeploy the Twilio Functions:
 ```text
 MEMORY_STORE_ID=mem_store_xxxxxxxxxxxxxxxxxxxxxxxxxx
 MEMORY_ID_TYPE=phone
+MEMORY_PROFILE_TRAIT_GROUP=Contact
 MEMORY_RECALL_OBSERVATIONS_LIMIT=5
 MEMORY_RECALL_SUMMARIES_LIMIT=2
 MEMORY_RECALL_RELEVANCE_THRESHOLD=0.5
@@ -467,7 +469,35 @@ https://your-functions-service-1234.twil.io/memory_recall
 
 Unlike the LiveKit version of this blueprint, the ElevenLabs Memory path does not need separate `/voice_memory` or `/studio_voice_memory` entrypoints. `/voice` and `/studio_voice` already pass `caller_number` to ElevenLabs as a dynamic variable. The Memory tool sends that caller number to `/memory_recall`, and the Function resolves the Memory profile on demand.
 
-### 6.3 Add the ElevenLabs Memory Tool
+### 6.3 Pre-seed Test Profiles for Passive Capture
+
+When using Conversation Orchestrator passive capture rules, Orchestrator can resolve an existing Memory profile for a caller, but it does not create a brand-new profile for a first-time passive caller. If no profile exists for the caller phone number, the conversation can still be captured and transcribed, but the caller participant may remain `UNKNOWN` with `profileId: null`. In that state, Memory extraction has no customer profile to write observations or summaries into.
+
+For demos and tests, pre-seed a profile for the phone number you will call from:
+
+```bash
+cd serverless
+npm run memory:create-profile -- --phone +15551230000
+```
+
+The script reads `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `MEMORY_STORE_ID`, `MEMORY_ID_TYPE`, and `MEMORY_PROFILE_TRAIT_GROUP` from `serverless/.env`. You can also pass the store explicitly:
+
+```bash
+npm run memory:create-profile -- \
+  --phone +15551230000 \
+  --memoryStoreId mem_store_xxxxxxxxxxxxxxxxxxxxxxxxxx \
+  --name "Alex Customer"
+```
+
+The script is idempotent: it looks up the profile by phone first, creates one only if missing, then verifies the lookup. By default it writes the phone trait as `Contact.phone`; set `MEMORY_PROFILE_TRAIT_GROUP` if your Memory Store uses a different trait group.
+
+For production, choose one of these approaches:
+
+- Pre-create or sync customer profiles from your CRM before calls arrive.
+- Use active Orchestrator ingestion with explicit `CUSTOMER` participants when you need first-contact profile creation.
+- Keep passive capture for low-touch demos where callers are already known in the Memory Store.
+
+### 6.4 Add the ElevenLabs Memory Tool
 
 Create the webhook tool from [elevenlabs/recall-customer-memory-tool.example.json](elevenlabs/recall-customer-memory-tool.example.json). This file uses the ElevenLabs Tools API `tool_config` shape. To create the tool through the API, wrap it in a `tool_config` object:
 
@@ -518,12 +548,16 @@ The Function looks up the Memory profile by `callerNumber`, calls Recall for tha
 
 If no profile is found, the response is still successful but `profileFound` is `false` and `memoryContext` is empty. The agent should continue normally.
 
-### 6.4 Add Memory Agent Instructions
+### 6.5 Add Memory Agent Instructions
 
-For testing and demos, add behavior like this to the ElevenLabs agent prompt so you can confirm the agent is accessing Memory successfully. In production, tune the trigger conditions and wording for your support flow:
+For Memory-enabled agents, paste [elevenlabs/agent-prompt-memory.md](elevenlabs/agent-prompt-memory.md) into the ElevenLabs agent prompt instead of the baseline [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md).
+
+That prompt keeps the same `escalate_to_human` contract and adds behavior like this so you can confirm the agent is accessing Memory successfully. In production, tune the trigger conditions and wording for your support flow:
 
 ```text
 If prior customer context would help you avoid asking the caller to repeat themselves, call recall_customer_memory once after the caller describes their issue with a short query for recent, issue-related support context. Use relevant context quietly to ask a better follow-up question or create a better escalation summary. Ignore unrelated or stale memories. Do not mention internal memory systems to the caller, and do not rely on memory as proof of identity or authorization.
+
+Call recall_customer_memory at most once for a given caller issue unless the caller explicitly asks about a different prior topic.
 
 If the caller asks what happened previously, what happened last time, or asks for a summary of a prior conversation, call recall_customer_memory with a query such as recent account access support context or recent account access conversation summary. Then summarize the relevant prior context in one or two sentences. Ignore unrelated or stale memories, even if they are returned. If no relevant prior context is found, say you do not see relevant previous context for this caller and continue helping normally.
 ```
@@ -533,7 +567,7 @@ Attach both tools to the ElevenLabs agent when testing Memory plus escalation:
 - `recall_customer_memory` for optional prior context.
 - `escalate_to_human` for Studio or TaskRouter handoff.
 
-### 6.5 Verify Memory Recall
+### 6.6 Verify Memory Recall
 
 Use the ElevenLabs tool execution log or call `/memory_recall` directly with the same bearer token:
 
