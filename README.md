@@ -235,6 +235,8 @@ curl -X POST https://api.elevenlabs.io/v1/convai/tools \
 
 If you create the tool in the ElevenLabs UI, use the JSON file as a reference and fill the form fields manually. The UI's "edit JSON" panel can use an internal form-state shape where headers, path params, query params, and body properties are arrays; pasting the API JSON there can produce validation errors such as "expected array" for `request_headers` or `request_body_schema.properties`.
 
+In the Tools API shape, body properties that use `dynamic_variable` intentionally omit `description`. ElevenLabs accepts only one of `description`, `dynamic_variable`, `is_system_provided`, `constant_value`, or `is_omitted` per string body property.
+
 The example includes the timing settings used for voice handoff:
 
 ```json
@@ -510,6 +512,8 @@ curl -X POST https://api.elevenlabs.io/v1/convai/tools \
 ```
 
 If you create the tool in the ElevenLabs UI, use the JSON file as a reference and fill the form fields manually. The UI's "edit JSON" panel can use a different internal shape than the public API.
+
+In the Tools API shape, body properties that use `dynamic_variable` intentionally omit `description`. ElevenLabs accepts only one of `description`, `dynamic_variable`, `is_system_provided`, `constant_value`, or `is_omitted` per string body property.
 
 The tool calls:
 

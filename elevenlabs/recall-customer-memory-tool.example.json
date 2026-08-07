@@ -19,7 +19,6 @@
       "properties": {
         "callerNumber": {
           "type": "string",
-          "description": "Original caller phone number used for Conversation Memory profile lookup.",
           "dynamic_variable": "caller_number"
         },
         "query": {

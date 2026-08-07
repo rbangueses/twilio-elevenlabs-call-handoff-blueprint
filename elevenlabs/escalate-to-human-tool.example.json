@@ -19,12 +19,10 @@
       "properties": {
         "parentCallSid": {
           "type": "string",
-          "description": "Original inbound Twilio Call SID to update during escalation.",
           "dynamic_variable": "parent_call_sid"
         },
         "handoffId": {
           "type": "string",
-          "description": "Correlation ID for Flex task attributes, logs, and analytics.",
           "dynamic_variable": "handoff_id"
         },
         "intent": { "type": "string", "description": "Snake_case routing intent." },
@@ -32,12 +30,10 @@
         "summary": { "type": "string", "description": "Concise handoff summary for the human." },
         "from": {
           "type": "string",
-          "description": "Original caller phone number.",
           "dynamic_variable": "caller_number"
         },
         "to": {
           "type": "string",
-          "description": "Twilio number the caller dialed.",
           "dynamic_variable": "called_number"
         }
       },
