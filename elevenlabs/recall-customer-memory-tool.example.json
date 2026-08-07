@@ -1,4 +1,5 @@
 {
+  "type": "webhook",
   "name": "recall_customer_memory",
   "description": "Fetch relevant prior customer context from Twilio Conversation Memory. Use this only after the caller describes their current issue and prior context would help avoid repeated questions or improve the handoff summary.",
   "pre_tool_speech": "auto",

@@ -1,4 +1,5 @@
 {
+  "type": "webhook",
   "name": "escalate_to_human",
   "description": "Escalate the active phone call to a human agent using Twilio. Use this only when the caller needs a human or the automation cannot safely continue.",
   "pre_tool_speech": "force",
