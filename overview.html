@@ -402,10 +402,16 @@
       }
 
       .route li {
-        display: flex;
-        gap: 10px;
-        align-items: flex-start;
+        display: grid;
+        gap: 6px;
         color: var(--muted);
+      }
+
+      .route-command {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
       }
 
       .route code,
@@ -808,8 +814,14 @@
                   Flex.
                 </p>
                 <ul class="route">
-                  <li><code>/studio_voice</code> sends the caller to ElevenLabs.</li>
-                  <li><code>/studio_escalate</code> redirects the live call back to the Studio Flow.</li>
+                  <li>
+                    <span class="route-command"><code>/studio_voice</code></span>
+                    <span>Sends the caller to ElevenLabs.</span>
+                  </li>
+                  <li>
+                    <span class="route-command"><code>/studio_escalate</code></span>
+                    <span>Redirects the live call back to the Studio Flow.</span>
+                  </li>
                   <li>Studio resumes on the TwiML Redirect return transition.</li>
                   <li>Send to Flex creates the human-agent task.</li>
                 </ul>
@@ -822,9 +834,18 @@
                   another TaskRouter-powered contact center.
                 </p>
                 <ul class="route">
-                  <li><code>/voice</code> sends the caller to ElevenLabs.</li>
-                  <li><code>/escalate</code> updates the parent call.</li>
-                  <li>Twilio returns <code>&lt;Enqueue&gt;</code> with task attributes.</li>
+                  <li>
+                    <span class="route-command"><code>/voice</code></span>
+                    <span>Sends the caller to ElevenLabs.</span>
+                  </li>
+                  <li>
+                    <span class="route-command"><code>/escalate</code></span>
+                    <span>Updates the parent call.</span>
+                  </li>
+                  <li>
+                    <span class="route-command"><code>&lt;Enqueue&gt;</code></span>
+                    <span>Twilio returns task attributes.</span>
+                  </li>
                   <li>TaskRouter routes the voice task to an agent.</li>
                 </ul>
               </article>
@@ -837,7 +858,10 @@
                   conference flow.
                 </p>
                 <ul class="route">
-                  <li><code>/voice</code> or <code>/studio_voice</code> sends the caller to ElevenLabs.</li>
+                  <li>
+                    <span class="route-command"><code>/voice</code><span>or</span><code>/studio_voice</code></span>
+                    <span>Sends the caller to ElevenLabs.</span>
+                  </li>
                   <li>The escalation tool posts summary and call identifiers to Twilio.</li>
                   <li>Your Function updates the parent call with custom TwiML.</li>
                   <li>Twilio continues the live call through your chosen route.</li>
