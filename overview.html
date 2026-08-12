@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Twilio ElevenLabs Call Handoff Blueprint</title>
+    <meta
+      name="description"
+      content="A Twilio-owned blueprint for handing an active ElevenLabs voice-agent call to Studio, TaskRouter, or Flex with context."
+    >
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #5d667a;
+        --soft: #f5f7fb;
+        --panel: #ffffff;
+        --line: #d9deea;
+        --twilio: #f22f46;
+        --eleven: #111827;
+        --studio: #3f7ee8;
+        --task: #0f9b7a;
+        --memory: #8657d9;
+        --shadow: 0 18px 42px rgba(23, 32, 51, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: #fbfcff;
+        line-height: 1.5;
+      }
+
+      a {
+        color: #165bd8;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page {
+        min-height: 100vh;
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        border-bottom: 1px solid var(--line);
+        background:
+          linear-gradient(135deg, rgba(242, 47, 70, 0.09), transparent 34%),
+          linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 76px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        color: #ffffff;
+        background: var(--twilio);
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+        gap: 48px;
+        align-items: center;
+        padding: 62px 0 72px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--twilio);
+        font-size: 13px;
+        font-weight: 760;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 780px;
+        font-size: clamp(42px, 7vw, 74px);
+      }
+
+      h2 {
+        font-size: clamp(28px, 4vw, 42px);
+      }
+
+      h3 {
+        font-size: 19px;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .hero-copy {
+        max-width: 710px;
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 19px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+        background: #ffffff;
+        font-weight: 720;
+        box-shadow: 0 3px 10px rgba(23, 32, 51, 0.06);
+      }
+
+      .button.primary {
+        border-color: var(--twilio);
+        color: #ffffff;
+        background: var(--twilio);
+      }
+
+      .signal-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .signal-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        color: var(--muted);
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .signal-body {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+      }
+
+      .signal-row {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid #e7ebf4;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .signal-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 760;
+        text-transform: uppercase;
+      }
+
+      .signal-value {
+        overflow-wrap: anywhere;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+
+      section {
+        padding: 72px 0;
+      }
+
+      .section-lead {
+        max-width: 780px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+        gap: 44px;
+        align-items: start;
+      }
+
+      .body-copy {
+        display: grid;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 34px;
+      }
+
+      .card {
+        min-height: 220px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 10px 24px rgba(23, 32, 51, 0.06);
+      }
+
+      .card p,
+      .flow-card p,
+      .check-card p {
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .card-token {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        color: #ffffff;
+        font-weight: 800;
+      }
+
+      .card-token.twilio {
+        background: var(--twilio);
+      }
+
+      .card-token.studio {
+        background: var(--studio);
+      }
+
+      .card-token.task {
+        background: var(--task);
+      }
+
+      .flow-wrap {
+        margin-top: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .flow-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .flow-diagram {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding: 24px;
+      }
+
+      .node {
+        position: relative;
+        min-height: 112px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--twilio);
+        border-radius: 8px;
+        background: #fbfcff;
+      }
+
+      .node.eleven {
+        border-top-color: var(--eleven);
+      }
+
+      .node.studio {
+        border-top-color: var(--studio);
+      }
+
+      .node.task {
+        border-top-color: var(--task);
+      }
+
+      .node.memory {
+        border-top-color: var(--memory);
+      }
+
+      .node strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .node span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .node:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 52px;
+        right: -18px;
+        width: 20px;
+        height: 2px;
+        background: var(--line);
+      }
+
+      .paths {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .flow-card {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .route {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .route li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--muted);
+      }
+
+      .route code,
+      .inline-code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f8;
+        color: #26334f;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .check-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 34px;
+      }
+
+      .check-card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .check-card strong {
+        display: block;
+      }
+
+      .callout {
+        margin-top: 32px;
+        padding: 26px;
+        border: 1px solid #ded6f4;
+        border-left: 5px solid var(--memory);
+        border-radius: 8px;
+        background: #fbf8ff;
+      }
+
+      .cta {
+        padding: 64px 0 82px;
+        color: #ffffff;
+        background: #141b2d;
+      }
+
+      .cta .shell {
+        display: flex;
+        justify-content: space-between;
+        gap: 28px;
+        align-items: center;
+      }
+
+      .cta p {
+        max-width: 710px;
+        margin-top: 12px;
+        color: #c7cfdf;
+        font-size: 18px;
+      }
+
+      .cta .button {
+        color: #ffffff;
+        background: transparent;
+        border-color: rgba(255, 255, 255, 0.26);
+      }
+
+      .cta .button.primary {
+        background: var(--twilio);
+        border-color: var(--twilio);
+      }
+
+      .footer {
+        padding: 26px 0;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        background: #ffffff;
+        font-size: 14px;
+      }
+
+      @media (max-width: 920px) {
+        .hero-grid,
+        .split,
+        .paths,
+        .cta .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-grid,
+        .split {
+          display: grid;
+        }
+
+        .cards,
+        .check-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .flow-diagram {
+          grid-template-columns: 1fr;
+        }
+
+        .node:not(:last-child)::after {
+          top: auto;
+          right: auto;
+          bottom: -18px;
+          left: 26px;
+          width: 2px;
+          height: 20px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .shell {
+          width: min(100% - 28px, 1120px);
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 18px 0;
+        }
+
+        .nav-links {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .hero-grid {
+          padding: 38px 0 52px;
+        }
+
+        section {
+          padding: 52px 0;
+        }
+
+        .cards,
+        .check-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .card {
+          min-height: auto;
+        }
+
+        .signal-row {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-title,
+        .cta .shell {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div class="shell">
+          <nav class="nav" aria-label="Main navigation">
+            <div class="brand">
+              <span class="brand-mark">T</span>
+              <span>Twilio + ElevenLabs Blueprint</span>
+            </div>
+            <div class="nav-links">
+              <a href="#when-to-use">When to use</a>
+              <a href="#how-it-works">How it works</a>
+              <a href="#tested">What is tested</a>
+              <a href="README.md">Setup</a>
+            </div>
+          </nav>
+
+          <div class="hero-grid">
+            <div>
+              <p class="eyebrow">Voice AI handoff reference</p>
+              <h1>Twilio ElevenLabs Call Handoff Blueprint</h1>
+              <p class="hero-copy">
+                A working pattern for moving an active ElevenLabs voice-agent
+                call back into Twilio so Studio, TaskRouter, or Flex can take
+                over with the caller context intact.
+              </p>
+              <div class="actions">
+                <a class="button primary" href="README.md">Read the setup guide</a>
+                <a class="button" href="https://github.com/rbangueses/twilio-elevenlabs-call-handoff-blueprint">View on GitHub</a>
+              </div>
+            </div>
+
+            <aside class="signal-panel" aria-label="Escalation context example">
+              <div class="signal-header">
+                <span>Escalation context</span>
+                <span>Flex task attributes</span>
+              </div>
+              <div class="signal-body">
+                <div class="signal-row">
+                  <span class="signal-label">Intent</span>
+                  <span class="signal-value">account_access</span>
+                </div>
+                <div class="signal-row">
+                  <span class="signal-label">Reason</span>
+                  <span class="signal-value">automation_limit</span>
+                </div>
+                <div class="signal-row">
+                  <span class="signal-label">Summary</span>
+                  <span class="signal-value">Caller is locked out and needs account recovery help.</span>
+                </div>
+                <div class="signal-row">
+                  <span class="signal-label">Call SID</span>
+                  <span class="signal-value">CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section id="what-it-is">
+          <div class="shell split">
+            <div>
+              <p class="eyebrow">What it is</p>
+              <h2>Human escalation for voice agents, owned by Twilio.</h2>
+            </div>
+            <div class="body-copy">
+              <p>
+                ElevenLabs can run the voice-agent conversation. Twilio can own
+                the phone number, Studio journey, TaskRouter routing, Flex task,
+                and downstream contact-center context. This blueprint connects
+                those pieces without relying on a blind transfer as the primary
+                handoff path.
+              </p>
+              <p>
+                The core move is simple: when Twilio sends the caller to
+                ElevenLabs, it passes the original parent
+                <span class="inline-code">CallSid</span> and caller metadata as
+                dynamic variables. When the agent needs a human, an ElevenLabs
+                webhook tool sends summary, intent, reason, and call identifiers
+                back to a protected Twilio Function. That Function updates the
+                original live call with the next TwiML instruction.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="why-useful" style="background: var(--soft);">
+          <div class="shell">
+            <p class="eyebrow">Why it is useful</p>
+            <h2>Keep the handoff structured instead of blind.</h2>
+            <p class="section-lead">
+              Native phone transfer is useful when all you need is to send a
+              caller somewhere else. This pattern is for the moment when the
+              handoff needs to carry operational context.
+            </p>
+
+            <div class="cards">
+              <article class="card">
+                <span class="card-token twilio">1</span>
+                <h3>Preserve call control</h3>
+                <p>
+                  Twilio updates the original live call, so the handoff can
+                  return to Studio or enqueue into TaskRouter without losing the
+                  parent call relationship.
+                </p>
+              </article>
+              <article class="card">
+                <span class="card-token studio">2</span>
+                <h3>Pass useful context</h3>
+                <p>
+                  The receiving human can get a concise summary, intent, reason,
+                  caller number, called number, parent call SID, and handoff ID.
+                </p>
+              </article>
+              <article class="card">
+                <span class="card-token task">3</span>
+                <h3>Route with Twilio</h3>
+                <p>
+                  Use Studio for journey control, Flex for agent experience, or
+                  TaskRouter for another Twilio-powered contact center.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="when-to-use">
+          <div class="shell split">
+            <div>
+              <p class="eyebrow">When to use</p>
+              <h2>Use it when escalation is part of the customer journey.</h2>
+            </div>
+            <div class="body-copy">
+              <p>
+                Use this blueprint when the AI agent is allowed to solve common
+                issues, but needs a controlled human fallback for account access,
+                billing, compliance, complex support, or explicit requests for a
+                person.
+              </p>
+              <p>
+                It is especially useful when your Twilio number already starts in
+                Studio, when Flex should receive structured task attributes, or
+                when routing logic needs to stay in TaskRouter instead of inside
+                the voice-agent platform.
+              </p>
+              <p>
+                Use ElevenLabs native transfer instead when the goal is only to
+                blind-transfer a caller to a phone number or SIP destination and
+                you do not need Twilio-owned context, routing, or Studio return.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" style="background: var(--soft);">
+          <div class="shell">
+            <p class="eyebrow">How it works</p>
+            <h2>Two routing patterns, one parent-call update.</h2>
+            <p class="section-lead">
+              The same ElevenLabs tool contract can hand the caller back to
+              either Studio or TaskRouter. The difference is the Twilio Function
+              URL the tool calls.
+            </p>
+
+            <div class="flow-wrap">
+              <div class="flow-title">
+                <span>Shared call lifecycle</span>
+                <span>Twilio Functions + ElevenLabs webhook tools</span>
+              </div>
+              <div class="flow-diagram" aria-label="High-level call flow diagram">
+                <div class="node">
+                  <strong>Twilio Voice</strong>
+                  <span>Caller reaches a Twilio number.</span>
+                </div>
+                <div class="node eleven">
+                  <strong>ElevenLabs agent</strong>
+                  <span>Twilio connects the live call through register-call.</span>
+                </div>
+                <div class="node studio">
+                  <strong>Escalation tool</strong>
+                  <span>Agent sends summary and call identifiers to Twilio.</span>
+                </div>
+                <div class="node task">
+                  <strong>Human routing</strong>
+                  <span>Studio, TaskRouter, or Flex receives the caller.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="paths">
+              <article class="flow-card">
+                <h3>Pattern A: Studio return</h3>
+                <p>
+                  Best when Studio owns IVR, branching, reporting, or Send to
+                  Flex.
+                </p>
+                <ul class="route">
+                  <li><code>/studio_voice</code> sends the caller to ElevenLabs.</li>
+                  <li><code>/studio_escalate</code> redirects the live call back to the Studio Flow.</li>
+                  <li>Studio resumes on the TwiML Redirect return transition.</li>
+                  <li>Send to Flex creates the human-agent task.</li>
+                </ul>
+              </article>
+
+              <article class="flow-card">
+                <h3>Pattern B: TaskRouter enqueue</h3>
+                <p>
+                  Best when you want the smallest direct handoff to Flex or
+                  another TaskRouter-powered contact center.
+                </p>
+                <ul class="route">
+                  <li><code>/voice</code> sends the caller to ElevenLabs.</li>
+                  <li><code>/escalate</code> updates the parent call.</li>
+                  <li>Twilio returns <code>&lt;Enqueue&gt;</code> with task attributes.</li>
+                  <li>TaskRouter routes the voice task to an agent.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="memory">
+          <div class="shell split">
+            <div>
+              <p class="eyebrow">Optional memory</p>
+              <h2>Add prior customer context without changing the handoff path.</h2>
+            </div>
+            <div>
+              <div class="body-copy">
+                <p>
+                  The optional memory overlay lets the ElevenLabs agent call a
+                  Twilio Function to recall relevant customer context from
+                  Conversation Memory before responding or escalating.
+                </p>
+                <p>
+                  Because both <span class="inline-code">/voice</span> and
+                  <span class="inline-code">/studio_voice</span> already pass the
+                  caller number as a dynamic variable, memory does not need a
+                  separate voice entrypoint. The tool calls
+                  <span class="inline-code">/memory_recall</span> on demand.
+                </p>
+              </div>
+              <div class="callout">
+                <h3>Where Orchestrator fits</h3>
+                <p>
+                  Conversation Orchestrator can capture conversations and link
+                  them to Memory profiles, giving the voice agent useful prior
+                  observations and summaries while keeping Twilio in control of
+                  routing and escalation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tested" style="background: var(--soft);">
+          <div class="shell">
+            <p class="eyebrow">What is tested</p>
+            <h2>A blueprint, not just a diagram.</h2>
+            <p class="section-lead">
+              The repository includes executable Functions, ElevenLabs tool
+              examples, a Studio Flow template, and automated tests around the
+              critical handoff behavior.
+            </p>
+
+            <div class="check-grid">
+              <article class="check-card">
+                <strong>Studio handoff</strong>
+                <p>Return redirect generation for <code>/studio_escalate</code>.</p>
+              </article>
+              <article class="check-card">
+                <strong>TaskRouter handoff</strong>
+                <p><code>&lt;Enqueue&gt;</code> generation and task attributes.</p>
+              </article>
+              <article class="check-card">
+                <strong>ElevenLabs tools</strong>
+                <p>API-importable webhook tool JSON and dynamic variables.</p>
+              </article>
+              <article class="check-card">
+                <strong>Memory recall</strong>
+                <p>Profile lookup, recall request shape, and tool response.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="cta">
+          <div class="shell">
+            <div>
+              <h2>Start from the setup guide.</h2>
+              <p>
+                Deploy the Twilio Functions, configure the ElevenLabs agent and
+                tools, then choose either the Studio or TaskRouter path for your
+                first end-to-end call.
+              </p>
+            </div>
+            <div class="actions">
+              <a class="button primary" href="README.md">Open README</a>
+              <a class="button" href="https://github.com/rbangueses/twilio-elevenlabs-call-handoff-blueprint">GitHub repo</a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="shell">
+          Proof-of-concept blueprint. Adapt security, routing, observability,
+          data retention, and compliance controls before production use.
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

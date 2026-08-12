@@ -2,6 +2,8 @@
 
 Conversational AI agents need a clean way to escalate to a human when they cannot resolve an interaction on their own.
 
+For a high-level introduction, see [overview.html](overview.html).
+
 This repo is a working blueprint for handing an active phone call from an ElevenLabs Conversational AI agent back to Twilio, then routing that caller to a human with context. The tested destinations are Twilio Studio, TaskRouter, and Flex. The core pattern is broader: pass the original Twilio parent `CallSid` into ElevenLabs as a dynamic variable, let the ElevenLabs agent decide when to escalate, then update that original Twilio Call resource with the next TwiML instruction.
 
 Flex is the reference human-agent destination in this repo. Pattern A uses Studio to resume the journey and then Send to Flex. Pattern B sends the caller directly to TaskRouter/Flex with `<Enqueue>`. The same parent-call update pattern can be adapted to another TaskRouter-powered contact center.
