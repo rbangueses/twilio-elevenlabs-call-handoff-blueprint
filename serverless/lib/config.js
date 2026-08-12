@@ -9,6 +9,10 @@ function loadConfig(env) {
     flexWorkflowSid: env.FLEX_WORKFLOW_SID || "",
     taskrouterWaitUrl: env.TASKROUTER_WAIT_URL || "",
     studioFlowWebhookUrl: env.STUDIO_FLOW_WEBHOOK_URL || "",
+    studioOutboundFlowSid: env.STUDIO_OUTBOUND_FLOW_SID || "",
+    studioOutboundFlowWebhookUrl: env.STUDIO_OUTBOUND_FLOW_WEBHOOK_URL || "",
+    outboundWebhookUrl: env.OUTBOUND_WEBHOOK_URL || "",
+    outboundStatusCallbackUrl: env.OUTBOUND_STATUS_CALLBACK_URL || "",
     memoryStoreId: env.MEMORY_STORE_ID || "",
     memoryIdType: env.MEMORY_ID_TYPE || "phone",
     memoryRecallObservationsLimit: numberValue(env.MEMORY_RECALL_OBSERVATIONS_LIMIT, 5),
@@ -27,6 +31,10 @@ const ENV_TO_CONFIG = {
   HANDOFF_TOKEN: "handoffToken",
   FLEX_WORKFLOW_SID: "flexWorkflowSid",
   STUDIO_FLOW_WEBHOOK_URL: "studioFlowWebhookUrl",
+  STUDIO_OUTBOUND_FLOW_SID: "studioOutboundFlowSid",
+  STUDIO_OUTBOUND_FLOW_WEBHOOK_URL: "studioOutboundFlowWebhookUrl",
+  OUTBOUND_WEBHOOK_URL: "outboundWebhookUrl",
+  OUTBOUND_STATUS_CALLBACK_URL: "outboundStatusCallbackUrl",
   MEMORY_STORE_ID: "memoryStoreId",
 };
 

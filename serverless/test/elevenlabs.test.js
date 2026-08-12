@@ -5,16 +5,39 @@ test("buildConversationClientData includes handoff metadata as dynamic variables
     CallSid: "CA1234567890abcdef1234567890abcdef",
     From: "+15551230000",
     To: "+15551239999",
-  });
+  }, { direction: "inbound" });
 
   expect(data.dynamic_variables.parent_call_sid).toBe("CA1234567890abcdef1234567890abcdef");
   expect(data.dynamic_variables.handoff_id).toBe("CA1234567890abcdef1234567890abcdef");
+  expect(data.dynamic_variables.call_direction).toBe("inbound");
+  expect(data.dynamic_variables.customer_number).toBe("+15551230000");
+  expect(data.dynamic_variables.twilio_number).toBe("+15551239999");
   expect(Object.keys(data.dynamic_variables).sort()).toEqual([
+    "call_direction",
     "called_number",
     "caller_number",
+    "customer_number",
     "handoff_id",
     "parent_call_sid",
+    "twilio_number",
   ]);
+});
+
+test("buildConversationClientData maps outbound customer context to the called party", () => {
+  const data = buildConversationClientData({
+    CallSid: "CA1234567890abcdef1234567890abcdef",
+    From: "+15551239999",
+    To: "+15551230000",
+    HandoffId: "outbound-1",
+  }, { direction: "outbound" });
+
+  expect(data.dynamic_variables.parent_call_sid).toBe("CA1234567890abcdef1234567890abcdef");
+  expect(data.dynamic_variables.handoff_id).toBe("outbound-1");
+  expect(data.dynamic_variables.call_direction).toBe("outbound");
+  expect(data.dynamic_variables.customer_number).toBe("+15551230000");
+  expect(data.dynamic_variables.twilio_number).toBe("+15551239999");
+  expect(data.dynamic_variables.caller_number).toBe("+15551239999");
+  expect(data.dynamic_variables.called_number).toBe("+15551230000");
 });
 
 test("registerTwilioCall returns TwiML from ElevenLabs", async () => {

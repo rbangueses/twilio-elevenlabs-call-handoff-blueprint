@@ -15,11 +15,11 @@
     },
     "request_body_schema": {
       "type": "object",
-      "description": "Payload sent to Twilio to recall relevant prior customer context. The caller number comes from Twilio dynamic variables, and the query should describe the current issue or prior context the agent needs.",
+      "description": "Payload sent to Twilio to recall relevant prior customer context. The customer number comes from Twilio dynamic variables, and the query should describe the current issue or prior context the agent needs.",
       "properties": {
         "callerNumber": {
           "type": "string",
-          "dynamic_variable": "caller_number"
+          "dynamic_variable": "customer_number"
         },
         "query": {
           "type": "string",

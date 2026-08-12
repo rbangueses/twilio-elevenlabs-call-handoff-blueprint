@@ -16,6 +16,9 @@ When calling `escalate_to_human`, provide:
 - `intent`: a snake_case category such as `account_access`, `billing`, `technical_support`, or `general_support`.
 - `reason`: one of `explicit_request`, `complex_issue`, `safety_or_compliance`, or `automation_limit`.
 - `summary`: one or two sentences with what the caller wants, what was tried, and what the human should do next.
+- `direction`: use `{{call_direction}}` exactly.
+- `customerNumber`: use `{{customer_number}}` exactly.
+- `twilioNumber`: use `{{twilio_number}}` exactly.
 - `from`: use `{{caller_number}}` exactly.
 - `to`: use `{{called_number}}` exactly.
 

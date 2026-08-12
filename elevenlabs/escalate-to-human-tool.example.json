@@ -28,6 +28,18 @@
         "intent": { "type": "string", "description": "Snake_case routing intent." },
         "reason": { "type": "string", "description": "Escalation reason code." },
         "summary": { "type": "string", "description": "Concise handoff summary for the human." },
+        "direction": {
+          "type": "string",
+          "dynamic_variable": "call_direction"
+        },
+        "customerNumber": {
+          "type": "string",
+          "dynamic_variable": "customer_number"
+        },
+        "twilioNumber": {
+          "type": "string",
+          "dynamic_variable": "twilio_number"
+        },
         "from": {
           "type": "string",
           "dynamic_variable": "caller_number"

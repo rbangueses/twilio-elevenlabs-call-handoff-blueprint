@@ -10,10 +10,12 @@ Flex is the reference human-agent destination in this repo. Pattern A uses Studi
 
 This blueprint intentionally uses ElevenLabs `register-call` and a custom ElevenLabs webhook tool. It does not rely on ElevenLabs native `transfer_to_number` as the primary path, because native transfer is best for simple blind transfer to a configured phone number or SIP URI. The goal here is Twilio-owned routing with handoff context: summary, intent, reason, original caller, original called number, parent call SID, and handoff ID.
 
-The repo has been exercised end to end with both included handoff paths:
+The repo has been exercised end to end with the included inbound handoff paths, the outbound TaskRouter happy path, and a Studio-owned outbound path that returns to Studio before using Enqueue Call:
 
 - **Studio path:** Twilio number starts a Studio Flow, Studio calls `/studio_voice`, ElevenLabs calls `/studio_escalate`, and the call returns to the same Studio execution before Send to Flex.
 - **TaskRouter path:** Twilio number calls `/voice`, ElevenLabs calls `/escalate`, and the original parent call is updated with `<Enqueue>` for Flex or another TaskRouter-powered contact center.
+- **Outbound TaskRouter path:** Your app calls `/start_outbound`, Twilio places an outbound call, `/outbound` connects the answered call to ElevenLabs, and `/escalate` enqueues the call to Flex with context.
+- **Outbound Studio path:** Your app calls `/start_studio_outbound`, Studio places the outbound call, `/outbound` connects the answered call to ElevenLabs, and `/studio_escalate` returns the call to Studio before Enqueue Call routes the voice task to TaskRouter/Flex. As of August 12, 2026, using Send to Flex for this final step is not supported in REST API-triggered flows, so Enqueue Call is the working interim Studio route.
 
 > **Proof of concept.** This blueprint is intended as a working reference implementation, not a production drop-in. Before using it in production, adapt the routing, authentication, prompts, observability, error handling, security controls, data-retention behavior, and compliance posture to your use case.
 
@@ -21,18 +23,20 @@ The repo has been exercised end to end with both included handoff paths:
 
 - [1. Prerequisites](#1-prerequisites)
 - [2. Choose the Escalation Pattern](#2-choose-the-escalation-pattern)
+  - [2.1 WhatsApp Business Calling Entry Point](#21-whatsapp-business-calling-entry-point)
 - [3. Shared Setup](#3-shared-setup)
   - [3.1 Deploy the Twilio Functions](#31-deploy-the-twilio-functions)
   - [3.2 Configure the ElevenLabs Agent](#32-configure-the-elevenlabs-agent)
   - [3.3 Configure the ElevenLabs Tool](#33-configure-the-elevenlabs-tool)
 - [4. Pattern A Setup: Using Studio](#4-pattern-a-setup-using-studio)
 - [5. Pattern B Setup: Using TaskRouter](#5-pattern-b-setup-using-taskrouter)
-- [6. Optional Conversation Memory](#6-optional-conversation-memory)
-- [7. Native ElevenLabs Transfer](#7-native-elevenlabs-transfer)
-- [8. How the Patterns Target the Right Call](#8-how-the-patterns-target-the-right-call)
-- [9. Test End to End](#9-test-end-to-end)
-- [10. Display Task Attributes in Flex](#10-display-task-attributes-in-flex)
-- [11. Local Checks](#11-local-checks)
+- [6. Outbound Calls](#6-outbound-calls)
+- [7. Optional Conversation Memory](#7-optional-conversation-memory)
+- [8. Native ElevenLabs Transfer](#8-native-elevenlabs-transfer)
+- [9. How the Patterns Target the Right Call](#9-how-the-patterns-target-the-right-call)
+- [10. Test End to End](#10-test-end-to-end)
+- [11. Display Task Attributes in Flex](#11-display-task-attributes-in-flex)
+- [12. Local Checks](#12-local-checks)
 
 ## 1. Prerequisites
 
@@ -50,6 +54,7 @@ For the tested TaskRouter/Flex paths, you also need:
 - Flex enabled in the Twilio account, or another TaskRouter-powered contact center.
 - The TaskRouter Workflow SID that should receive escalated voice tasks. This must start with `WW`; do not use a Studio Flow SID (`FW...`) or a TaskRouter Workspace SID (`WS...`).
 - For Pattern A, a Studio Flow with a TwiML Redirect widget and a Send to Flex widget.
+- For Studio-owned outbound, a REST-triggered Studio Flow with Make Outgoing Call, TwiML Redirect, and Enqueue Call widgets.
 
 Install and authenticate the Twilio CLI:
 
@@ -74,21 +79,60 @@ Use **Pattern A** when the Twilio number already starts in Studio, or when you w
 
 Use **Pattern B** when you want the smallest direct TaskRouter handoff: a Twilio Function connects the caller to ElevenLabs, and the ElevenLabs tool updates the parent call with `<Enqueue>`.
 
+Use **outbound TaskRouter** when your app should place the customer call and then hand off directly to TaskRouter/Flex with `/escalate`.
+
+Use **outbound Studio** when your app should start a Studio execution, let Studio place the outbound call, and then return to Studio before Enqueue Call routes the task. This is the working Studio-owned outbound path until Send to Flex supports REST API-triggered flows.
+
 Use **ElevenLabs native transfer** when the desired outcome is simply "send this caller to a phone number or SIP URI" and you do not need Twilio to receive the summary or control Studio/Flex/TaskRouter routing.
 
-The repo includes both tested Function pairs:
+### 2.1 WhatsApp Business Calling Entry Point
+
+The same inbound handoff patterns can also be used with Twilio WhatsApp Business Calling. In that case, the WhatsApp sender does not point directly at a phone-number webhook. Instead, configure the WhatsApp sender's Voice Endpoint Configuration to use a TwiML Voice Application. That TwiML App is the entry point into this blueprint.
+
+For the direct TaskRouter/Flex path, set the TwiML App Voice Request URL to the deployed `/voice` Function and use `POST`:
+
+```text
+https://your-functions-service-1234.twil.io/voice
+```
+
+Configure the ElevenLabs `escalate_to_human` tool URL for that agent as:
+
+```text
+https://{{system__env_handoff_host}}/escalate
+```
+
+For the Studio-owned path, set the TwiML App Voice Request URL to the published Studio Flow webhook and use `POST`:
+
+```text
+https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+That Studio Flow should then use the TwiML Redirect widget to call `/studio_voice`, and the ElevenLabs `escalate_to_human` tool should call:
+
+```text
+https://{{system__env_handoff_host}}/studio_escalate
+```
+
+After creating the TwiML App, assign it to the WhatsApp Business Calling sender. The sender has one inbound voice route at a time, so choose either the direct `/voice` route or the Studio Flow route for a given test. See [docs/whatsapp-business-calling.md](docs/whatsapp-business-calling.md) for a fuller walkthrough.
+
+The repo includes these tested Function paths:
 
 - [serverless/functions/studio_voice.js](serverless/functions/studio_voice.js): Pattern A entrypoint called by the Studio TwiML Redirect widget.
 - [serverless/functions/studio_escalate.js](serverless/functions/studio_escalate.js): Pattern A handoff endpoint called by the ElevenLabs webhook tool.
 - [serverless/functions/voice.js](serverless/functions/voice.js): Pattern B entrypoint called directly by the Twilio number webhook.
 - [serverless/functions/escalate.js](serverless/functions/escalate.js): Pattern B handoff endpoint called by the ElevenLabs webhook tool.
+- [serverless/functions/start_outbound.js](serverless/functions/start_outbound.js): outbound starter that creates the Twilio call.
+- [serverless/functions/start_studio_outbound.js](serverless/functions/start_studio_outbound.js): outbound starter that creates a Studio execution and lets Studio place the call.
+- [serverless/functions/outbound.js](serverless/functions/outbound.js): outbound voice webhook that registers the answered call with ElevenLabs.
+- [serverless/functions/outbound_status.js](serverless/functions/outbound_status.js): optional Twilio call-progress callback endpoint.
 
 A single Twilio phone number can be pointed at one incoming voice target at a time. To test Pattern A, route the number to the Studio Flow. To test Pattern B, route the same number directly to `/voice`.
 
 The ElevenLabs webhook tool also has one webhook URL at a time. To preserve the same explicit pattern as the LiveKit blueprint, configure separate tools or separate agents for Pattern A and Pattern B:
 
 - Pattern A tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
-- Pattern B tool URL: `https://{{system__env_handoff_host}}/escalate`
+- Pattern B and outbound TaskRouter tool URL: `https://{{system__env_handoff_host}}/escalate`
+- Outbound Studio tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
 
 If you point a Studio-started call at `/studio_voice` but the ElevenLabs tool still calls `/escalate`, the call can still reach Flex. However, Studio will not resume through the TwiML Redirect `return` transition; `/escalate` bypasses Studio and enqueues directly.
 
@@ -119,6 +163,13 @@ FLEX_WORKFLOW_SID=WWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TASKROUTER_WAIT_URL=
 
 STUDIO_FLOW_WEBHOOK_URL=https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STUDIO_OUTBOUND_FLOW_SID=FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STUDIO_OUTBOUND_FLOW_WEBHOOK_URL=https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Optional direct outbound-call starter. Leave blank to let Twilio Functions derive
+# https://<service-domain>/outbound for deployed Functions.
+OUTBOUND_WEBHOOK_URL=
+OUTBOUND_STATUS_CALLBACK_URL=
 
 # Optional Conversation Memory.
 MEMORY_STORE_ID=
@@ -130,7 +181,7 @@ MEMORY_RECALL_RELEVANCE_THRESHOLD=
 MEMORY_RECALL_LOOKBACK_DAYS=
 ```
 
-`FLEX_WORKFLOW_SID` is required for Pattern B. `STUDIO_FLOW_WEBHOOK_URL` is required for Pattern A. If you create the Studio Flow after the first Function deployment, add the Flow webhook URL to `serverless/.env` and deploy again.
+`FLEX_WORKFLOW_SID` is required for Pattern B, direct outbound TaskRouter handoff, and the outbound Studio Enqueue Call widget. `STUDIO_FLOW_WEBHOOK_URL` is required for inbound Pattern A. `STUDIO_OUTBOUND_FLOW_SID` and `STUDIO_OUTBOUND_FLOW_WEBHOOK_URL` are required only for Studio-owned outbound. If you create a Studio Flow after the first Function deployment, add the Flow webhook URL to `serverless/.env` and deploy again.
 
 Deploy:
 
@@ -149,6 +200,10 @@ https://your-functions-service-1234.twil.io/studio_voice
 https://your-functions-service-1234.twil.io/studio_escalate
 https://your-functions-service-1234.twil.io/voice
 https://your-functions-service-1234.twil.io/escalate
+https://your-functions-service-1234.twil.io/start_outbound
+https://your-functions-service-1234.twil.io/start_studio_outbound
+https://your-functions-service-1234.twil.io/outbound
+https://your-functions-service-1234.twil.io/outbound_status
 https://your-functions-service-1234.twil.io/memory_recall
 https://your-functions-service-1234.twil.io/health
 ```
@@ -189,9 +244,12 @@ parent_call_sid
 handoff_id
 caller_number
 called_number
+call_direction
+customer_number
+twilio_number
 ```
 
-The `/voice` and `/studio_voice` Functions set those values through ElevenLabs `register-call`:
+The `/voice`, `/studio_voice`, and `/outbound` Functions set those values through ElevenLabs `register-call`:
 
 ```json
 {
@@ -199,13 +257,16 @@ The `/voice` and `/studio_voice` Functions set those values through ElevenLabs `
   "dynamic_variables": {
     "parent_call_sid": "CA...",
     "handoff_id": "CA...",
+    "call_direction": "inbound",
     "caller_number": "+15551230000",
-    "called_number": "+15551239999"
+    "called_number": "+15551239999",
+    "customer_number": "+15551230000",
+    "twilio_number": "+15551239999"
   }
 }
 ```
 
-`parent_call_sid` is the original inbound Twilio Call SID. It is the value the escalation Function updates. `handoff_id` is a correlation field for Flex attributes, logs, and analytics. The sample defaults it to the parent call SID if no separate handoff ID is provided.
+`parent_call_sid` is the active Twilio Call SID that the escalation Function updates. For inbound calls, `customer_number` equals the caller. For outbound calls, `customer_number` equals the called party and `twilio_number` equals the Twilio number that placed the call. `handoff_id` is a correlation field for Flex attributes, logs, and analytics. The sample defaults it to the parent call SID if no separate handoff ID is provided.
 
 Paste [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md) into the agent prompt. If you enable the optional Conversation Memory overlay, use [elevenlabs/agent-prompt-memory.md](elevenlabs/agent-prompt-memory.md) instead. If you want to test both Pattern A and Pattern B with the same ElevenLabs agent, attach both tools and make their names/descriptions explicit enough for the model to choose the right one in that test. For the simplest reproduction, use one agent/tool configuration per pattern.
 
@@ -282,6 +343,9 @@ Use the ElevenLabs test console to confirm the tool request body contains:
   "intent": "account_access",
   "reason": "explicit_request",
   "summary": "Concise handoff summary",
+  "direction": "inbound",
+  "customerNumber": "+15551230000",
+  "twilioNumber": "+15551239999",
   "from": "+15551230000",
   "to": "+15551239999"
 }
@@ -342,11 +406,14 @@ The Send to Flex widget uses task attributes returned from the TwiML Redirect wi
   "customerName": "{{trigger.call.From}}",
   "channelType": "voice",
   "reason": "ai_escalation",
+  "direction": "{{widgets.redirect_to_elevenlabs.direction}}",
   "intent": "{{widgets.redirect_to_elevenlabs.intent}}",
   "summary": "{{widgets.redirect_to_elevenlabs.summary}}",
   "description": "{{widgets.redirect_to_elevenlabs.description}}",
   "parentCallSid": "{{widgets.redirect_to_elevenlabs.parentCallSid}}",
-  "handoffId": "{{widgets.redirect_to_elevenlabs.handoffId}}"
+  "handoffId": "{{widgets.redirect_to_elevenlabs.handoffId}}",
+  "customerNumber": "{{widgets.redirect_to_elevenlabs.customerNumber}}",
+  "twilioNumber": "{{widgets.redirect_to_elevenlabs.twilioNumber}}"
 }
 ```
 
@@ -427,9 +494,190 @@ https://{{system__env_handoff_host}}/escalate
 
 Configure `FLEX_WORKFLOW_SID=WW...` in `serverless/.env`, then redeploy.
 
-## 6. Optional Conversation Memory
+## 6. Outbound Calls
 
-Use Twilio Conversation Memory when you want the ElevenLabs agent to access relevant customer context from prior conversations while keeping the same Studio or TaskRouter handoff mechanics. This is an optional overlay on Pattern A or Pattern B; choose the base routing pattern first, then add Memory.
+The outbound starter lets your app initiate a customer call and still use the same ElevenLabs handoff tool contract. The direct TaskRouter route mirrors Pattern B. The Studio-owned route mirrors Pattern A: Studio owns the outbound execution, then resumes after ElevenLabs escalation.
+
+### 6.1 Direct TaskRouter/Flex Outbound
+
+For direct TaskRouter/Flex outbound, your app calls `/start_outbound`, Twilio creates an outbound Programmable Voice call to the customer, and Twilio invokes `/outbound` when that call is answered. `/outbound` registers the live call with ElevenLabs using `direction=outbound`.
+
+The direct TaskRouter call flow is:
+
+1. Your app posts to `/start_outbound` with the customer phone number.
+2. `/start_outbound` creates a Twilio outbound call from `TWILIO_PHONE_NUMBER`.
+3. Twilio invokes `/outbound` as the call's Voice URL.
+4. `/outbound` registers the call with ElevenLabs and passes `call_direction=outbound`, `customer_number=<called party>`, and `twilio_number=<Twilio number>`.
+5. ElevenLabs returns TwiML with `<Connect><Stream>`.
+6. The ElevenLabs agent calls the TaskRouter handoff tool when it needs a human.
+7. The tool posts to `/escalate`.
+8. `/escalate` updates the original outbound Twilio Call resource with `<Enqueue workflowSid="WW...">`.
+9. TaskRouter creates the voice task, and Flex receives the task with handoff context.
+
+### 6.2 Direct TaskRouter Tested Happy Path
+
+The current outbound happy path has been tested with direct TaskRouter/Flex enqueue:
+
+1. `/start_outbound` created the outbound Twilio call.
+2. The customer answered the call.
+3. Twilio invoked `/outbound`.
+4. `/outbound` registered the call with ElevenLabs and set `call_direction=outbound`.
+5. The ElevenLabs agent escalated through `escalate_to_human`.
+6. `/escalate` updated the active outbound Call with `<Enqueue>`.
+7. Flex received the voice task with `description`, `direction`, and `escalationReason` task attributes.
+
+Expected outbound Flex attributes include:
+
+```json
+{
+  "type": "outbound",
+  "reason": "ai_escalation",
+  "direction": "outbound",
+  "channelType": "voice",
+  "intent": "account_access",
+  "escalationReason": "automation_limit",
+  "summary": "The customer needs help from a human agent.",
+  "description": "The customer needs help from a human agent.",
+  "parentCallSid": "CA...",
+  "handoffId": "outbound-demo-1",
+  "from": "+15551239999",
+  "to": "+447397321173",
+  "customerNumber": "+447397321173",
+  "twilioNumber": "+15551239999"
+}
+```
+
+### 6.3 Configure Outbound URLs
+
+Leave `OUTBOUND_WEBHOOK_URL` blank in deployed Twilio Functions unless you need to override it. The Function will derive:
+
+```text
+https://your-functions-service-1234.twil.io/outbound
+```
+
+If you want Twilio call-progress events, set:
+
+```text
+OUTBOUND_STATUS_CALLBACK_URL=https://your-functions-service-1234.twil.io/outbound_status
+```
+
+### 6.4 Start a Direct TaskRouter Test Call
+
+Then start a test call:
+
+```bash
+curl -X POST "https://your-functions-service-1234.twil.io/start_outbound" \
+  -H "authorization: Bearer $HANDOFF_TOKEN" \
+  -H "content-type: application/json" \
+  --data '{
+    "toNumber": "+15551230000",
+    "handoffId": "outbound-demo-1"
+  }'
+```
+
+The response shape is:
+
+```json
+{
+  "ok": true,
+  "route": "outbound",
+  "callSid": "CA...",
+  "status": "queued",
+  "from": "+15551239999",
+  "to": "+15551230000",
+  "handoffId": "outbound-demo-1"
+}
+```
+
+Outbound calling can incur charges and may trigger compliance requirements. For production, add consent checks, local quiet-hour enforcement, suppression lists, branded calling or trust controls where appropriate, retry policy, rate limits, and observability before using this starter path.
+
+### 6.5 Studio-Owned Outbound
+
+> **Current platform limitation as of August 12, 2026.** The ideal Studio-owned outbound shape would end with Send to Flex, matching the inbound Studio pattern. Today, Send to Flex fails with `failedToEnqueue` in this flow because Studio currently supports that widget only for incoming call and incoming chat triggers, not REST API-triggered flows. Product is aware of this limitation and may support the cleaner Send to Flex path in the future. Until then, the working Studio-owned outbound route is to return to Studio and use Enqueue Call with the Flex TaskRouter Workflow.
+
+For Studio-owned outbound, create and publish a REST-triggered Studio Flow with this shape:
+
+```text
+Trigger: REST API
+  -> Make Outgoing Call: call_customer
+      answered -> TwiML Redirect: redirect_to_elevenlabs
+        return -> Enqueue Call: enqueue_call_1
+```
+
+The TwiML Redirect widget URL should point to:
+
+```text
+https://your-functions-service-1234.twil.io/outbound?HandoffId={{flow.data.handoffId}}
+```
+
+The outbound Studio call flow is:
+
+1. Your app posts to `/start_studio_outbound` with the customer phone number.
+2. `/start_studio_outbound` creates a Studio Execution using `STUDIO_OUTBOUND_FLOW_SID`.
+3. Studio's Make Outgoing Call widget places the call from `TWILIO_PHONE_NUMBER` to the customer.
+4. When the customer answers, Studio's TwiML Redirect widget calls `/outbound`.
+5. `/outbound` registers the call with ElevenLabs and passes `call_direction=outbound`, `customer_number=<called party>`, and `twilio_number=<Twilio number>`.
+6. The ElevenLabs agent calls the Studio handoff tool when it needs a human.
+7. The tool posts to `/studio_escalate`.
+8. `/studio_escalate` detects `direction=outbound` and redirects the live call back to `STUDIO_OUTBOUND_FLOW_WEBHOOK_URL` with `FlowEvent=return`.
+9. Studio resumes on the TwiML Redirect widget's `return` transition.
+10. Studio uses Enqueue Call with the Flex TaskRouter Workflow to create the Flex voice task.
+
+This is not quite as ergonomic as Send to Flex because it exposes the lower-level TaskRouter enqueue configuration in Studio. Keep the widget named clearly, such as `enqueue_call_1`, and configure it with the same Flex Workflow SID used by the direct TaskRouter path. When Studio supports Send to Flex for REST API-triggered outbound flows, this final widget should be replaceable with Send to Flex to align the outbound Studio path with the inbound Studio path.
+
+Configure the Enqueue Call widget with:
+
+- **Workflow:** the Flex TaskRouter Workflow that should receive the outbound voice task.
+- **Task attributes:** the same handoff context used by the direct TaskRouter path, including `summary`, `description`, `intent`, `direction`, `parentCallSid`, `handoffId`, `customerNumber`, and `twilioNumber`.
+- **Priority/timeout:** choose values that match your contact-center routing policy.
+
+Set these values in `serverless/.env`, then redeploy:
+
+```text
+STUDIO_OUTBOUND_FLOW_SID=FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STUDIO_OUTBOUND_FLOW_WEBHOOK_URL=https://webhooks.twilio.com/v1/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Flows/FWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+`STUDIO_OUTBOUND_FLOW_SID` is used by `/start_studio_outbound` to create the Studio Execution. `STUDIO_OUTBOUND_FLOW_WEBHOOK_URL` is used by `/studio_escalate` to return the live outbound call to the same published Flow execution.
+
+Reference starter call for this Studio-owned outbound path:
+
+```bash
+curl -X POST "https://your-functions-service-1234.twil.io/start_studio_outbound" \
+  -H "authorization: Bearer $HANDOFF_TOKEN" \
+  -H "content-type: application/json" \
+  --data '{
+    "toNumber": "+15551230000",
+    "handoffId": "outbound-studio-demo-1"
+  }'
+```
+
+The response shape is:
+
+```json
+{
+  "ok": true,
+  "route": "studio_outbound",
+  "executionSid": "FN...",
+  "status": "active",
+  "flowSid": "FW...",
+  "from": "+15551239999",
+  "to": "+15551230000",
+  "handoffId": "outbound-studio-demo-1"
+}
+```
+
+For this route, configure the ElevenLabs `escalate_to_human` tool URL as:
+
+```text
+https://{{system__env_handoff_host}}/studio_escalate
+```
+
+The outbound Studio path was tested with Enqueue Call as the final Studio widget. The earlier Send to Flex variant reached the TwiML Redirect `return` transition but failed at the final widget because Send to Flex currently does not support REST API-triggered flows.
+
+## 7. Optional Conversation Memory
+
+Use Twilio Conversation Memory when you want the ElevenLabs agent to access relevant customer context from prior conversations while keeping the same Studio or TaskRouter handoff mechanics. This is an optional overlay on Pattern A, Pattern B, or either outbound handoff path; choose the base routing pattern first, then add Memory.
 
 The main use case is continuity. The caller should not have to repeat what happened last time. Memory can give the ElevenLabs agent relevant prior observations, summaries, preferences, or open issues so it can personalize the conversation and create a better escalation summary.
 
@@ -437,7 +685,7 @@ A second use case is cross-channel context. If the customer previously interacte
 
 Before enabling this path, create a Twilio Conversation Memory Store and make sure the store can resolve profiles by phone number. In production, the usual pattern is to link that store to a Conversation Orchestrator configuration so passive capture can write observations and summaries after conversations complete. You can also write observations, summaries, or traits directly through the Memory API.
 
-### 6.1 Memory, Orchestrator, and Conversation Intelligence
+### 7.1 Memory, Orchestrator, and Conversation Intelligence
 
 In this blueprint, the Memory path assumes Twilio Conversation Orchestrator is configured for capture and profile resolution. Orchestrator is the layer that turns voice and messaging traffic into normalized conversations, links those conversations to a Memory Store, and can also attach Conversation Intelligence configurations.
 
@@ -447,7 +695,7 @@ That means enabling the optional Memory path can also create the foundation for 
 
 Conversation Memory is not a HIPAA Eligible Service or PCI compliant. Do not use this optional path for workflows that require those controls without a separate compliance review.
 
-### 6.2 Configure Memory Values
+### 7.2 Configure Memory Values
 
 Add the Memory values to `serverless/.env`, then redeploy the Twilio Functions:
 
@@ -471,13 +719,13 @@ After redeploying, the Function Service exposes:
 https://your-functions-service-1234.twil.io/memory_recall
 ```
 
-Unlike the LiveKit version of this blueprint, the ElevenLabs Memory path does not need separate `/voice_memory` or `/studio_voice_memory` entrypoints. `/voice` and `/studio_voice` already pass `caller_number` to ElevenLabs as a dynamic variable. The Memory tool sends that caller number to `/memory_recall`, and the Function resolves the Memory profile on demand.
+Unlike the LiveKit version of this blueprint, the ElevenLabs Memory path does not need separate `/voice_memory` or `/studio_voice_memory` entrypoints. `/voice`, `/studio_voice`, and `/outbound` already pass `customer_number` to ElevenLabs as a dynamic variable. The Memory tool sends that customer number to `/memory_recall`, and the Function resolves the Memory profile on demand.
 
-### 6.3 Pre-seed Test Profiles for Passive Capture
+### 7.3 Pre-seed Test Profiles for Passive Capture
 
 When using Conversation Orchestrator passive capture rules, Orchestrator can resolve an existing Memory profile for a caller, but it does not create a brand-new profile for a first-time passive caller. If no profile exists for the caller phone number, the conversation can still be captured and transcribed, but the caller participant may remain `UNKNOWN` with `profileId: null`. In that state, Memory extraction has no customer profile to write observations or summaries into.
 
-For demos and tests, pre-seed a profile for the phone number you will call from:
+For demos and tests, pre-seed a profile for the customer phone number. For inbound tests, this is the phone number you call from. For outbound tests, this is the phone number you call.
 
 ```bash
 cd serverless
@@ -501,7 +749,7 @@ For production, choose one of these approaches:
 - Use active Orchestrator ingestion with explicit `CUSTOMER` participants when you need first-contact profile creation.
 - Keep passive capture for low-touch demos where callers are already known in the Memory Store.
 
-### 6.4 Add the ElevenLabs Memory Tool
+### 7.4 Add the ElevenLabs Memory Tool
 
 Create the webhook tool from [elevenlabs/recall-customer-memory-tool.example.json](elevenlabs/recall-customer-memory-tool.example.json). This file uses the ElevenLabs Tools API `tool_config` shape. To create the tool through the API, wrap it in a `tool_config` object:
 
@@ -534,12 +782,12 @@ The tool request body is:
 
 ```json
 {
-  "callerNumber": "{{caller_number}}",
+  "callerNumber": "{{customer_number}}",
   "query": "recent account access support context"
 }
 ```
 
-The Function looks up the Memory profile by `callerNumber`, calls Recall for that profile, and returns:
+The Function looks up the Memory profile by `callerNumber`. For inbound calls, this is the original caller. For outbound calls, this is the customer being called. It then calls Recall for that profile and returns:
 
 ```json
 {
@@ -554,7 +802,7 @@ The Function looks up the Memory profile by `callerNumber`, calls Recall for tha
 
 If no profile is found, the response is still successful but `profileFound` is `false` and `memoryContext` is empty. The agent should continue normally.
 
-### 6.5 Add Memory Agent Instructions
+### 7.5 Add Memory Agent Instructions
 
 For Memory-enabled agents, paste [elevenlabs/agent-prompt-memory.md](elevenlabs/agent-prompt-memory.md) into the ElevenLabs agent prompt instead of the baseline [elevenlabs/agent-prompt.md](elevenlabs/agent-prompt.md).
 
@@ -573,7 +821,7 @@ Attach both tools to the ElevenLabs agent when testing Memory plus escalation:
 - `recall_customer_memory` for optional prior context.
 - `escalate_to_human` for Studio or TaskRouter handoff.
 
-### 6.6 Verify Memory Recall
+### 7.6 Verify Memory Recall
 
 Use the ElevenLabs tool execution log or call `/memory_recall` directly with the same bearer token:
 
@@ -592,7 +840,7 @@ If `profileFound` is `false`, confirm:
 
 If `profileFound` is `true` but `memoryContext` is empty, try a more specific query, lower the relevance threshold, or wait for extraction/indexing to finish.
 
-## 7. Native ElevenLabs Transfer
+## 8. Native ElevenLabs Transfer
 
 ElevenLabs includes native transfer capabilities such as `transfer_to_number`. Use the native tool when the target is simply a phone number or SIP URI and you do not need Twilio to receive the summary or route through Studio/Flex/TaskRouter with custom attributes.
 
@@ -602,11 +850,11 @@ This blueprint focuses on the custom webhook path because it preserves Twilio co
 - TaskRouter/Flex can receive structured task attributes.
 - The handoff Function updates the original parent Call resource, not a generated child leg.
 
-## 8. How the Patterns Target the Right Call
+## 9. How the Patterns Target the Right Call
 
 The important handoff detail is the parent call SID.
 
-When Twilio first sends the caller to ElevenLabs, `/voice` or `/studio_voice` passes the original inbound `CallSid` as:
+When Twilio first sends the live call to ElevenLabs, `/voice`, `/studio_voice`, or `/outbound` passes the active Twilio `CallSid` as:
 
 ```text
 parent_call_sid
@@ -618,11 +866,16 @@ When the agent escalates, the ElevenLabs tool sends that value back to Twilio as
 parentCallSid
 ```
 
-The escalation Function validates that it looks like a Twilio Call SID, then calls the Twilio REST API to update that exact call with new TwiML. This is what moves the live caller out of the ElevenLabs stream and into Studio, TaskRouter, or Flex.
+The escalation Function validates that it looks like a Twilio Call SID, then calls the Twilio REST API to update that exact call with new TwiML. This is what moves the live caller or called customer out of the ElevenLabs stream and into Studio, TaskRouter, or Flex.
+
+The raw Twilio leg fields are preserved as `from` and `to`, while the normalized fields identify the customer consistently:
+
+- Inbound: `customerNumber = From`, `twilioNumber = To`.
+- Outbound: `customerNumber = To`, `twilioNumber = From`.
 
 Do not substitute an ElevenLabs conversation ID, a child call SID, or a Flex task SID for `parentCallSid`.
 
-## 9. Test End to End
+## 10. Test End to End
 
 ### Pattern A: Studio
 
@@ -646,12 +899,45 @@ Do not substitute an ElevenLabs conversation ID, a child call SID, or a Flex tas
 6. Confirm the original Call is updated with `<Enqueue workflowSid="WW...">`.
 7. Confirm Flex or your TaskRouter assignment callback receives `summary`, `intent`, `parentCallSid`, and `handoffId`.
 
+### Outbound TaskRouter
+
+1. Make sure the ElevenLabs TaskRouter tool calls `/escalate`.
+2. Make sure `TWILIO_PHONE_NUMBER`, `FLEX_WORKFLOW_SID`, and `HANDOFF_TOKEN` are configured.
+3. Post to `/start_outbound` with a verified or callable customer number.
+4. Answer the outbound call.
+5. Confirm Twilio invokes `/outbound` and ElevenLabs receives `call_direction=outbound`.
+6. Ask the agent for a human.
+7. Confirm the tool execution posts to `/escalate`.
+8. Confirm the original outbound Call is updated with `<Enqueue workflowSid="WW...">`.
+9. Confirm Flex or your TaskRouter assignment callback receives `direction=outbound`, `customerNumber`, `twilioNumber`, `summary`, `intent`, `parentCallSid`, and `handoffId`.
+10. Confirm the task also includes `description` and `escalationReason` for the receiving agent.
+
+### Outbound Studio
+
+1. Make sure the outbound Studio Flow uses a REST API Trigger, Make Outgoing Call, TwiML Redirect to `/outbound`, and Enqueue Call with the Flex TaskRouter Workflow.
+2. Make sure `STUDIO_OUTBOUND_FLOW_SID`, `STUDIO_OUTBOUND_FLOW_WEBHOOK_URL`, `TWILIO_PHONE_NUMBER`, `FLEX_WORKFLOW_SID`, and `HANDOFF_TOKEN` are configured.
+3. Make sure the ElevenLabs Studio tool calls `/studio_escalate`.
+4. Post to `/start_studio_outbound` with a verified or callable customer number.
+5. Answer the outbound call.
+6. Confirm Twilio invokes `/outbound` and ElevenLabs receives `call_direction=outbound`.
+7. Ask the agent for a human.
+8. Confirm the tool execution posts to `/studio_escalate`.
+9. Confirm `/studio_escalate` updates the original outbound Call with a Studio `<Redirect>` that includes `FlowEvent=return`.
+10. Confirm Studio resumes from the TwiML Redirect `return` transition and Enqueue Call creates the Flex voice task.
+11. Confirm Flex or your TaskRouter assignment callback receives `direction=outbound`, `customerNumber`, `twilioNumber`, `summary`, `intent`, `parentCallSid`, and `handoffId`.
+
 ### Useful live checks
 
 List recent calls:
 
 ```bash
 twilio api:core:calls:list --to "$TWILIO_PHONE_NUMBER" --limit 5 -o json
+```
+
+List recent outbound calls from your Twilio number:
+
+```bash
+twilio api:core:calls:list --from "$TWILIO_PHONE_NUMBER" --limit 5 -o json
 ```
 
 Inspect a call's TwiML updates:
@@ -670,9 +956,13 @@ twilio serverless:logs --service-sid ZSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --enviro
 
 If the agent says the transfer sentence and then the call fails with Twilio's generic application-error message, inspect the call events and confirm `/studio_escalate` redirected to a real `STUDIO_FLOW_WEBHOOK_URL`. A 404 from a `webhooks.twilio.com/.../Flows/FW...` URL usually means the env var still points to a placeholder or unpublished/missing Flow.
 
+If outbound Studio reaches the TwiML Redirect `return` transition and then fails at the final widget with `failedToEnqueue`, confirm the final widget is Enqueue Call, not Send to Flex. As of August 12, 2026, Send to Flex does not support REST API-triggered outbound Studio flows.
+
+If the outbound Studio Enqueue Call widget fails, confirm it is configured with the Flex TaskRouter Workflow SID and task attributes. Do not use a Studio Flow SID or TaskRouter Workspace SID in the Workflow field.
+
 If the agent starts saying the transfer sentence but gets cut off, inspect the ElevenLabs tool configuration and restore `pre_tool_speech=force`, `execution_mode=post_tool_speech`, and `interruption_mode=disable_during_tool`.
 
-## 10. Display Task Attributes in Flex
+## 11. Display Task Attributes in Flex
 
 In Flex, inspect the active task attributes to confirm the handoff payload arrived:
 
@@ -690,16 +980,23 @@ Expected attributes include:
 ```json
 {
   "reason": "ai_escalation",
+  "direction": "inbound",
   "intent": "account_access",
+  "escalationReason": "explicit_request",
   "summary": "Caller is locked out and needs account recovery help.",
+  "description": "Caller is locked out and needs account recovery help.",
   "parentCallSid": "CA...",
   "handoffId": "CA...",
   "from": "+15551230000",
-  "to": "+15551239999"
+  "to": "+15551239999",
+  "customerNumber": "+15551230000",
+  "twilioNumber": "+15551239999"
 }
 ```
 
-## 11. Local Checks
+For outbound, expect `direction` and `type` to be `outbound`, with the customer in `customerNumber` and the Twilio number in `twilioNumber`.
+
+## 12. Local Checks
 
 Install dependencies and run tests:
 
@@ -712,9 +1009,12 @@ npm test
 The test suite covers:
 
 - ElevenLabs `register-call` request shape.
+- Outbound Twilio Calls API starter shape.
+- Studio outbound execution starter shape.
+- Direction-aware customer and Twilio number metadata.
 - Handoff payload validation.
 - TaskRouter `<Enqueue>` TwiML generation.
-- Studio return `<Redirect>` generation.
+- Direction-aware Studio return `<Redirect>` generation.
 - Conversation Memory profile lookup and Recall request shape.
 - `/memory_recall` authorization and tool response shape.
 - Bearer-token validation.

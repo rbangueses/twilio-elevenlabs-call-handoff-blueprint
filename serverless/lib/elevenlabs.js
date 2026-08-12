@@ -1,12 +1,21 @@
-function buildConversationClientData(event) {
+function buildConversationClientData(event, options = {}) {
   const parentCallSid = event.CallSid;
+  const direction = options.direction || event.CallDirection || event.call_direction || "inbound";
+  const callerNumber = event.From || "";
+  const calledNumber = event.To || "";
+  const customerNumber = direction === "outbound" ? calledNumber : callerNumber;
+  const twilioNumber = direction === "outbound" ? callerNumber : calledNumber;
+
   return {
     type: "conversation_initiation_client_data",
     dynamic_variables: {
       parent_call_sid: parentCallSid,
       handoff_id: event.HandoffId || parentCallSid,
-      caller_number: event.From || "",
-      called_number: event.To || "",
+      call_direction: direction,
+      caller_number: callerNumber,
+      called_number: calledNumber,
+      customer_number: customerNumber,
+      twilio_number: twilioNumber,
     },
   };
 }

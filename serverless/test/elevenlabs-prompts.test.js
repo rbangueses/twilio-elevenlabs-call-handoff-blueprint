@@ -11,6 +11,7 @@ test("baseline agent prompt keeps the handoff contract without Memory instructio
   expect(prompt).toContain("escalate_to_human");
   expect(prompt).toContain("{{parent_call_sid}}");
   expect(prompt).toContain("{{caller_number}}");
+  expect(prompt).toContain("{{customer_number}}");
   expect(prompt).not.toContain("recall_customer_memory");
 });
 
@@ -22,5 +23,6 @@ test("Memory agent prompt adds recall guidance while preserving the handoff cont
   expect(prompt).toContain("escalate_to_human");
   expect(prompt).toContain("{{parent_call_sid}}");
   expect(prompt).toContain("{{caller_number}}");
+  expect(prompt).toContain("{{customer_number}}");
   expect(prompt).toContain("relevant context recalled from Memory");
 });

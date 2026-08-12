@@ -10,6 +10,19 @@ function normalizeHandoffPayload(input) {
     throw new Error("Invalid parentCallSid");
   }
 
+  const rawDirection = trimString(input.direction || input.callDirection || input.call_direction || "inbound", 16);
+  const direction = rawDirection === "outbound" ? "outbound" : "inbound";
+  const from = trimString(input.from, 32);
+  const to = trimString(input.to, 32);
+  const customerNumber = trimString(
+    input.customerNumber || input.customer_number || (direction === "outbound" ? to : from),
+    32,
+  );
+  const twilioNumber = trimString(
+    input.twilioNumber || input.twilio_number || (direction === "outbound" ? from : to),
+    32,
+  );
+
   return {
     parentCallSid,
     handoffId: trimString(input.handoffId || input.handoff_id || parentCallSid, 80),
@@ -17,16 +30,20 @@ function normalizeHandoffPayload(input) {
     reason: trimString(input.reason || "ai_escalation", 80),
     summary: trimString(input.summary, 900),
     description: trimString(input.description || input.summary, 900),
-    from: trimString(input.from, 32),
-    to: trimString(input.to, 32),
+    direction,
+    from,
+    to,
+    customerNumber,
+    twilioNumber,
   };
 }
 
 function buildTaskAttributes(payload) {
   return {
-    type: "inbound",
+    type: payload.direction || "inbound",
     reason: "ai_escalation",
     channelType: "voice",
+    direction: payload.direction || "inbound",
     intent: payload.intent,
     escalationReason: payload.reason,
     summary: payload.summary,
@@ -35,6 +52,8 @@ function buildTaskAttributes(payload) {
     handoffId: payload.handoffId,
     from: payload.from,
     to: payload.to,
+    customerNumber: payload.customerNumber,
+    twilioNumber: payload.twilioNumber,
   };
 }
 
@@ -55,11 +74,18 @@ function buildTaskrouterTwiML(config, payload) {
 
 function buildStudioReturnTwiML(config, payload) {
   const { VoiceResponse } = require("twilio").twiml;
-  if (!config.studioFlowWebhookUrl) {
-    throw new Error("STUDIO_FLOW_WEBHOOK_URL is required for Studio escalation");
+  const studioWebhookUrl = payload.direction === "outbound"
+    ? config.studioOutboundFlowWebhookUrl
+    : config.studioFlowWebhookUrl;
+  const requiredEnv = payload.direction === "outbound"
+    ? "STUDIO_OUTBOUND_FLOW_WEBHOOK_URL"
+    : "STUDIO_FLOW_WEBHOOK_URL";
+
+  if (!studioWebhookUrl) {
+    throw new Error(`${requiredEnv} is required for Studio escalation`);
   }
 
-  const url = new URL(config.studioFlowWebhookUrl);
+  const url = new URL(studioWebhookUrl);
   url.searchParams.set("FlowEvent", "return");
   url.searchParams.set("route", "flex");
   url.searchParams.set("intent", payload.intent);
@@ -67,6 +93,9 @@ function buildStudioReturnTwiML(config, payload) {
   url.searchParams.set("description", payload.description);
   url.searchParams.set("parentCallSid", payload.parentCallSid);
   url.searchParams.set("handoffId", payload.handoffId);
+  url.searchParams.set("direction", payload.direction);
+  url.searchParams.set("customerNumber", payload.customerNumber);
+  url.searchParams.set("twilioNumber", payload.twilioNumber);
 
   const response = new VoiceResponse();
   response.redirect({ method: "POST" }, url.toString());

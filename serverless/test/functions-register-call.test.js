@@ -36,7 +36,7 @@ test("/voice returns ElevenLabs TwiML as XML", async () => {
   expect(dependencies.registerTwilioCall).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({
     direction: "inbound",
   }));
-  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event);
+  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event, { direction: "inbound" });
 });
 
 test("/studio_voice uses the same parent call metadata shape", async () => {
@@ -46,7 +46,7 @@ test("/studio_voice uses the same parent call metadata shape", async () => {
   await createStudioVoiceHandler(dependencies)(context, event, callback);
 
   expect(callback.mock.calls[0][1].toString()).toContain("<Response>");
-  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event);
+  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event, { direction: "inbound" });
 });
 
 test("/outbound registers outbound Twilio calls", async () => {
@@ -61,4 +61,5 @@ test("/outbound registers outbound Twilio calls", async () => {
     fromNumber: event.From,
     toNumber: event.To,
   }));
+  expect(dependencies.buildConversationClientData).toHaveBeenCalledWith(event, { direction: "outbound" });
 });
