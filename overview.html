@@ -424,15 +424,6 @@
         font-size: 0.92em;
       }
 
-      .callout {
-        margin-top: 32px;
-        padding: 26px;
-        border: 1px solid #ded6f4;
-        border-left: 5px solid var(--memory);
-        border-radius: 8px;
-        background: #fbf8ff;
-      }
-
       .footer {
         padding: 26px 0;
         color: var(--muted);
@@ -819,36 +810,44 @@
           </div>
         </section>
 
-        <section id="memory">
-          <div class="shell split">
-            <div>
-              <p class="eyebrow">Optional memory</p>
-              <h2>Add prior customer context without changing the handoff path.</h2>
-            </div>
-            <div>
-              <div class="body-copy">
+        <section id="platform">
+          <div class="shell">
+            <p class="eyebrow">Optional Platform Layer</p>
+            <h2>Memory and Intelligence can sit on top.</h2>
+            <p class="section-lead">
+              Conversation Memory is optional. When enabled, the ElevenLabs
+              agent can recall relevant prior customer context while the same
+              Twilio-owned handoff mechanics continue to route the live call.
+            </p>
+
+            <div class="cards">
+              <article class="card">
+                <span class="badge">Orchestrator</span>
+                <h3>Capture conversations</h3>
                 <p>
-                  The optional memory overlay lets the ElevenLabs agent call a
-                  Twilio Function to recall relevant customer context from
-                  Conversation Memory before responding or escalating.
+                  Conversation Orchestrator is the capture and configuration
+                  layer that groups voice and messaging interactions into
+                  normalized conversations.
                 </p>
+              </article>
+              <article class="card">
+                <span class="badge blue">Memory</span>
+                <h3>Recall customer context</h3>
                 <p>
-                  Because both <span class="inline-code">/voice</span> and
-                  <span class="inline-code">/studio_voice</span> already pass the
-                  caller number as a dynamic variable, memory does not need a
-                  separate voice entrypoint. The tool calls
-                  <span class="inline-code">/memory_recall</span> on demand.
+                  Memory stores and retrieves customer context across sessions
+                  and channels, helping the ElevenLabs agent avoid making
+                  callers repeat what already happened.
                 </p>
-              </div>
-              <div class="callout">
-                <h3>Where Orchestrator fits</h3>
+              </article>
+              <article class="card">
+                <span class="badge teal">CINTEL</span>
+                <h3>Analyze conversations</h3>
                 <p>
-                  Conversation Orchestrator can capture conversations and link
-                  them to Memory profiles, giving the voice agent useful prior
-                  observations and summaries while keeping Twilio in control of
-                  routing and escalation.
+                  Conversation Intelligence is independent from Memory, but it
+                  can use the same captured conversations for summaries,
+                  sentiment, QA, and other analysis.
                 </p>
-              </div>
+              </article>
             </div>
           </div>
         </section>
