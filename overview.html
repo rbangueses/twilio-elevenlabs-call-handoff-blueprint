@@ -381,7 +381,7 @@
 
       .paths {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 18px;
         margin-top: 24px;
       }
@@ -767,11 +767,12 @@
         <section id="how-it-works" style="background: var(--soft);">
           <div class="shell">
             <p class="eyebrow">How it works</p>
-            <h2>Two routing patterns, one parent-call update.</h2>
+            <h2>Three routing patterns, one parent-call update.</h2>
             <p class="section-lead">
               The same ElevenLabs tool contract can hand the caller back to
-              either Studio or TaskRouter. The difference is the Twilio Function
-              URL the tool calls.
+              Studio, TaskRouter, or another TwiML-controlled destination. The
+              difference is the Twilio Function URL and TwiML instruction used
+              after escalation.
             </p>
 
             <div class="flow-wrap">
@@ -794,7 +795,7 @@
                 </div>
                 <div class="node task">
                   <strong>Human routing</strong>
-                  <span>Studio, TaskRouter, or Flex receives the caller.</span>
+                  <span>Studio, TaskRouter, or custom TwiML receives the caller.</span>
                 </div>
               </div>
             </div>
@@ -825,6 +826,21 @@
                   <li><code>/escalate</code> updates the parent call.</li>
                   <li>Twilio returns <code>&lt;Enqueue&gt;</code> with task attributes.</li>
                   <li>TaskRouter routes the voice task to an agent.</li>
+                </ul>
+              </article>
+
+              <article class="flow-card">
+                <h3>Pattern C: Generic TwiML route</h3>
+                <p>
+                  Best when escalation should continue into a custom
+                  Programmable Voice app, SIP endpoint, phone number, or
+                  conference flow.
+                </p>
+                <ul class="route">
+                  <li><code>/voice</code> or <code>/studio_voice</code> sends the caller to ElevenLabs.</li>
+                  <li>The escalation tool posts summary and call identifiers to Twilio.</li>
+                  <li>Your Function updates the parent call with custom TwiML.</li>
+                  <li>Twilio continues the live call through your chosen route.</li>
                 </ul>
               </article>
             </div>
