@@ -175,7 +175,7 @@
         background: var(--twilio);
       }
 
-      .signal-panel {
+      .hero-panel {
         border: 1px solid var(--line);
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.86);
@@ -183,46 +183,28 @@
         overflow: hidden;
       }
 
-      .signal-header {
+      .panel-head {
         display: flex;
         justify-content: space-between;
         gap: 12px;
         padding: 16px 18px;
         color: var(--muted);
         border-bottom: 1px solid var(--line);
-        font-size: 13px;
-        font-weight: 700;
-        text-transform: uppercase;
+        font-size: 14px;
       }
 
-      .signal-body {
-        display: grid;
-        gap: 12px;
+      .panel-head strong {
+        color: var(--ink);
+      }
+
+      .panel-body {
         padding: 18px;
       }
 
-      .signal-row {
-        display: grid;
-        grid-template-columns: 86px minmax(0, 1fr);
-        gap: 14px;
-        align-items: start;
-        padding: 12px;
-        border: 1px solid #e7ebf4;
-        border-radius: 8px;
-        background: #ffffff;
-      }
-
-      .signal-label {
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 760;
-        text-transform: uppercase;
-      }
-
-      .signal-value {
-        overflow-wrap: anywhere;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 13px;
+      .mini-diagram {
+        display: block;
+        width: 100%;
+        height: auto;
       }
 
       section {
@@ -540,10 +522,6 @@
           min-height: auto;
         }
 
-        .signal-row {
-          grid-template-columns: 1fr;
-        }
-
         .flow-title,
         .cta .shell {
           flex-direction: column;
@@ -584,28 +562,60 @@
               </div>
             </div>
 
-            <aside class="signal-panel" aria-label="Escalation context example">
-              <div class="signal-header">
-                <span>Escalation context</span>
-                <span>Flex task attributes</span>
+            <aside class="hero-panel" aria-label="High-level blueprint diagram">
+              <div class="panel-head">
+                <span><strong>Core idea:</strong> contain, decide, hand off</span>
+                <span>Voice + AI + routing</span>
               </div>
-              <div class="signal-body">
-                <div class="signal-row">
-                  <span class="signal-label">Intent</span>
-                  <span class="signal-value">account_access</span>
-                </div>
-                <div class="signal-row">
-                  <span class="signal-label">Reason</span>
-                  <span class="signal-value">automation_limit</span>
-                </div>
-                <div class="signal-row">
-                  <span class="signal-label">Summary</span>
-                  <span class="signal-value">Caller is locked out and needs account recovery help.</span>
-                </div>
-                <div class="signal-row">
-                  <span class="signal-label">Call SID</span>
-                  <span class="signal-value">CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
-                </div>
+              <div class="panel-body">
+                <svg class="mini-diagram" viewBox="0 0 720 520" role="img" aria-label="High-level call handoff flow">
+                  <defs>
+                    <marker id="hero-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                      <path d="M2,2 L10,6 L2,10 Z" fill="#5d667a" />
+                    </marker>
+                    <style>
+                      .hero-node { fill: #fff; stroke: #d9deea; stroke-width: 2; }
+                      .hero-twilio { fill: #fff7f8; stroke: #f22f46; stroke-width: 2.5; }
+                      .hero-eleven { fill: #f4f5f8; stroke: #111827; stroke-width: 2.5; }
+                      .hero-route { fill: #ecfdf7; stroke: #0f9b7a; stroke-width: 2.5; }
+                      .hero-label { fill: #172033; font: 700 18px system-ui, sans-serif; }
+                      .hero-small { fill: #5d667a; font: 500 13px system-ui, sans-serif; }
+                      .hero-line { fill: none; stroke: #5d667a; stroke-width: 2.2; marker-end: url(#hero-arrow); }
+                      .hero-dash { fill: none; stroke: #5d667a; stroke-width: 2.2; stroke-dasharray: 8 8; marker-end: url(#hero-arrow); }
+                    </style>
+                  </defs>
+
+                  <rect x="58" y="55" width="180" height="96" rx="8" class="hero-twilio" />
+                  <text x="148" y="91" text-anchor="middle" class="hero-label">Twilio Voice</text>
+                  <text x="148" y="118" text-anchor="middle" class="hero-small">owns inbound call</text>
+
+                  <rect x="420" y="55" width="220" height="96" rx="8" class="hero-eleven" />
+                  <text x="530" y="91" text-anchor="middle" class="hero-label">ElevenLabs Agent</text>
+                  <text x="530" y="118" text-anchor="middle" class="hero-small">self-service first</text>
+
+                  <rect x="250" y="235" width="220" height="112" rx="8" class="hero-twilio" />
+                  <text x="360" y="273" text-anchor="middle" class="hero-label">Parent Call Update</text>
+                  <text x="360" y="300" text-anchor="middle" class="hero-small">agent sends context</text>
+                  <text x="360" y="323" text-anchor="middle" class="hero-small">Twilio routes caller</text>
+
+                  <rect x="58" y="410" width="180" height="80" rx="8" class="hero-route" />
+                  <text x="148" y="443" text-anchor="middle" class="hero-label">Studio</text>
+                  <text x="148" y="468" text-anchor="middle" class="hero-small">resume journey</text>
+
+                  <rect x="270" y="410" width="180" height="80" rx="8" class="hero-route" />
+                  <text x="360" y="443" text-anchor="middle" class="hero-label">TaskRouter</text>
+                  <text x="360" y="468" text-anchor="middle" class="hero-small">queue to agent</text>
+
+                  <rect x="482" y="410" width="180" height="80" rx="8" class="hero-route" />
+                  <text x="572" y="443" text-anchor="middle" class="hero-label">TwiML Route</text>
+                  <text x="572" y="468" text-anchor="middle" class="hero-small">dial, SIP, app</text>
+
+                  <path d="M238 103 H410" class="hero-line" />
+                  <path d="M530 151 C530 210 470 224 434 247" class="hero-dash" />
+                  <path d="M360 347 V398" class="hero-line" />
+                  <path d="M320 347 C255 365 185 377 156 398" class="hero-line" />
+                  <path d="M400 347 C465 365 535 377 564 398" class="hero-line" />
+                </svg>
               </div>
             </aside>
           </div>
