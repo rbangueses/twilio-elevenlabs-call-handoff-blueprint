@@ -23,7 +23,8 @@ The repo has been exercised end to end with the included inbound handoff paths, 
 
 - [1. Prerequisites](#1-prerequisites)
 - [2. Choose the Escalation Pattern](#2-choose-the-escalation-pattern)
-  - [2.1 WhatsApp Business Calling Entry Point](#21-whatsapp-business-calling-entry-point)
+  - [2.1 Function Paths](#21-function-paths)
+  - [2.2 WhatsApp Business Calling Entry Point](#22-whatsapp-business-calling-entry-point)
 - [3. Shared Setup](#3-shared-setup)
   - [3.1 Deploy the Twilio Functions](#31-deploy-the-twilio-functions)
   - [3.2 Configure the ElevenLabs Agent](#32-configure-the-elevenlabs-agent)
@@ -85,7 +86,30 @@ Use **outbound Studio** when your app should start a Studio execution, let Studi
 
 Use **ElevenLabs native transfer** when the desired outcome is simply "send this caller to a phone number or SIP URI" and you do not need Twilio to receive the summary or control Studio/Flex/TaskRouter routing.
 
-### 2.1 WhatsApp Business Calling Entry Point
+### 2.1 Function Paths
+
+The repo includes these tested Function paths:
+
+- [serverless/functions/studio_voice.js](serverless/functions/studio_voice.js): Pattern A entrypoint called by the Studio TwiML Redirect widget.
+- [serverless/functions/studio_escalate.js](serverless/functions/studio_escalate.js): Pattern A handoff endpoint called by the ElevenLabs webhook tool.
+- [serverless/functions/voice.js](serverless/functions/voice.js): Pattern B entrypoint called directly by the Twilio number webhook.
+- [serverless/functions/escalate.js](serverless/functions/escalate.js): Pattern B handoff endpoint called by the ElevenLabs webhook tool.
+- [serverless/functions/start_outbound.js](serverless/functions/start_outbound.js): outbound starter that creates the Twilio call.
+- [serverless/functions/start_studio_outbound.js](serverless/functions/start_studio_outbound.js): outbound starter that creates a Studio execution and lets Studio place the call.
+- [serverless/functions/outbound.js](serverless/functions/outbound.js): outbound voice webhook that registers the answered call with ElevenLabs.
+- [serverless/functions/outbound_status.js](serverless/functions/outbound_status.js): optional Twilio call-progress callback endpoint.
+
+A single Twilio phone number can be pointed at one incoming voice target at a time. To test Pattern A, route the number to the Studio Flow. To test Pattern B, route the same number directly to `/voice`.
+
+The ElevenLabs webhook tool also has one webhook URL at a time. To preserve the same explicit pattern as the LiveKit blueprint, configure separate tools or separate agents for Pattern A and Pattern B:
+
+- Pattern A tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
+- Pattern B and outbound TaskRouter tool URL: `https://{{system__env_handoff_host}}/escalate`
+- Outbound Studio tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
+
+If you point a Studio-started call at `/studio_voice` but the ElevenLabs tool still calls `/escalate`, the call can still reach Flex. However, Studio will not resume through the TwiML Redirect `return` transition; `/escalate` bypasses Studio and enqueues directly.
+
+### 2.2 WhatsApp Business Calling Entry Point
 
 The same inbound handoff patterns can also be used with Twilio WhatsApp Business Calling. In that case, the WhatsApp sender does not point directly at a phone-number webhook. Instead, configure the WhatsApp sender's Voice Endpoint Configuration to use a TwiML Voice Application. That TwiML App is the entry point into this blueprint.
 
@@ -114,27 +138,6 @@ https://{{system__env_handoff_host}}/studio_escalate
 ```
 
 After creating the TwiML App, assign it to the WhatsApp Business Calling sender. The sender has one inbound voice route at a time, so choose either the direct `/voice` route or the Studio Flow route for a given test. See [docs/whatsapp-business-calling.md](docs/whatsapp-business-calling.md) for a fuller walkthrough.
-
-The repo includes these tested Function paths:
-
-- [serverless/functions/studio_voice.js](serverless/functions/studio_voice.js): Pattern A entrypoint called by the Studio TwiML Redirect widget.
-- [serverless/functions/studio_escalate.js](serverless/functions/studio_escalate.js): Pattern A handoff endpoint called by the ElevenLabs webhook tool.
-- [serverless/functions/voice.js](serverless/functions/voice.js): Pattern B entrypoint called directly by the Twilio number webhook.
-- [serverless/functions/escalate.js](serverless/functions/escalate.js): Pattern B handoff endpoint called by the ElevenLabs webhook tool.
-- [serverless/functions/start_outbound.js](serverless/functions/start_outbound.js): outbound starter that creates the Twilio call.
-- [serverless/functions/start_studio_outbound.js](serverless/functions/start_studio_outbound.js): outbound starter that creates a Studio execution and lets Studio place the call.
-- [serverless/functions/outbound.js](serverless/functions/outbound.js): outbound voice webhook that registers the answered call with ElevenLabs.
-- [serverless/functions/outbound_status.js](serverless/functions/outbound_status.js): optional Twilio call-progress callback endpoint.
-
-A single Twilio phone number can be pointed at one incoming voice target at a time. To test Pattern A, route the number to the Studio Flow. To test Pattern B, route the same number directly to `/voice`.
-
-The ElevenLabs webhook tool also has one webhook URL at a time. To preserve the same explicit pattern as the LiveKit blueprint, configure separate tools or separate agents for Pattern A and Pattern B:
-
-- Pattern A tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
-- Pattern B and outbound TaskRouter tool URL: `https://{{system__env_handoff_host}}/escalate`
-- Outbound Studio tool URL: `https://{{system__env_handoff_host}}/studio_escalate`
-
-If you point a Studio-started call at `/studio_voice` but the ElevenLabs tool still calls `/escalate`, the call can still reach Flex. However, Studio will not resume through the TwiML Redirect `return` transition; `/escalate` bypasses Studio and enqueues directly.
 
 ## 3. Shared Setup
 
