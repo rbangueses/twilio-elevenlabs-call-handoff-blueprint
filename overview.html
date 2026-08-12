@@ -250,7 +250,7 @@
 
       .card p,
       .flow-card p,
-      .check-card p {
+      .next-step p {
         margin-top: 12px;
         color: var(--muted);
       }
@@ -424,24 +424,6 @@
         font-size: 0.92em;
       }
 
-      .check-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 34px;
-      }
-
-      .check-card {
-        padding: 20px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #ffffff;
-      }
-
-      .check-card strong {
-        display: block;
-      }
-
       .callout {
         margin-top: 32px;
         padding: 26px;
@@ -449,37 +431,6 @@
         border-left: 5px solid var(--memory);
         border-radius: 8px;
         background: #fbf8ff;
-      }
-
-      .cta {
-        padding: 64px 0 82px;
-        color: #ffffff;
-        background: #141b2d;
-      }
-
-      .cta .shell {
-        display: flex;
-        justify-content: space-between;
-        gap: 28px;
-        align-items: center;
-      }
-
-      .cta p {
-        max-width: 710px;
-        margin-top: 12px;
-        color: #c7cfdf;
-        font-size: 18px;
-      }
-
-      .cta .button {
-        color: #ffffff;
-        background: transparent;
-        border-color: rgba(255, 255, 255, 0.26);
-      }
-
-      .cta .button.primary {
-        background: var(--twilio);
-        border-color: var(--twilio);
       }
 
       .footer {
@@ -492,9 +443,7 @@
 
       @media (max-width: 920px) {
         .hero-grid,
-        .split,
-        .paths,
-        .cta .shell {
+        .split {
           grid-template-columns: 1fr;
         }
 
@@ -504,7 +453,7 @@
         }
 
         .cards,
-        .check-grid {
+        .paths {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
@@ -547,7 +496,7 @@
         }
 
         .cards,
-        .check-grid {
+        .paths {
           grid-template-columns: 1fr;
         }
 
@@ -555,8 +504,7 @@
           min-height: auto;
         }
 
-        .flow-title,
-        .cta .shell {
+        .flow-title {
           flex-direction: column;
           align-items: flex-start;
         }
@@ -575,7 +523,7 @@
             <div class="nav-links">
               <a href="#when-to-use">When to use</a>
               <a href="#how-it-works">How it works</a>
-              <a href="#tested">What is tested</a>
+              <a href="#next">Next step</a>
               <a href="README.md">Setup</a>
             </div>
           </nav>
@@ -905,50 +853,20 @@
           </div>
         </section>
 
-        <section id="tested" style="background: var(--soft);">
+        <section class="next-step" id="next" style="background: var(--soft);">
           <div class="shell">
-            <p class="eyebrow">What is tested</p>
-            <h2>A blueprint, not just a diagram.</h2>
+            <p class="eyebrow">Next step</p>
+            <h2>Go deeper when you are ready to build.</h2>
             <p class="section-lead">
-              The repository includes executable Functions, ElevenLabs tool
-              examples, a Studio Flow template, and automated tests around the
-              critical handoff behavior.
+              The repository README is the implementation guide. It walks
+              through the call flow, Twilio Functions, ElevenLabs agent and tool
+              configuration, Studio setup, TaskRouter enqueue path, optional
+              Memory overlay, and local checks.
             </p>
 
-            <div class="check-grid">
-              <article class="check-card">
-                <strong>Studio handoff</strong>
-                <p>Return redirect generation for <code>/studio_escalate</code>.</p>
-              </article>
-              <article class="check-card">
-                <strong>TaskRouter handoff</strong>
-                <p><code>&lt;Enqueue&gt;</code> generation and task attributes.</p>
-              </article>
-              <article class="check-card">
-                <strong>ElevenLabs tools</strong>
-                <p>API-importable webhook tool JSON and dynamic variables.</p>
-              </article>
-              <article class="check-card">
-                <strong>Memory recall</strong>
-                <p>Profile lookup, recall request shape, and tool response.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="cta">
-          <div class="shell">
-            <div>
-              <h2>Start from the setup guide.</h2>
-              <p>
-                Deploy the Twilio Functions, configure the ElevenLabs agent and
-                tools, then choose either the Studio or TaskRouter path for your
-                first end-to-end call.
-              </p>
-            </div>
             <div class="actions">
-              <a class="button primary" href="README.md">Open README</a>
-              <a class="button" href="https://github.com/rbangueses/twilio-elevenlabs-call-handoff-blueprint">GitHub repo</a>
+              <a class="button primary" href="README.md">Read Setup Guide</a>
+              <a class="button" href="https://github.com/rbangueses/twilio-elevenlabs-call-handoff-blueprint">Open GitHub Repo</a>
             </div>
           </div>
         </section>
