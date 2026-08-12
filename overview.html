@@ -255,6 +255,29 @@
         color: var(--muted);
       }
 
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        color: var(--twilio);
+        background: #fff0f2;
+        font-size: 12px;
+        font-weight: 780;
+        letter-spacing: 0.02em;
+      }
+
+      .badge.blue {
+        color: var(--studio);
+        background: #edf4ff;
+      }
+
+      .badge.teal {
+        color: var(--task);
+        background: #eafaf5;
+      }
+
       .card-token {
         display: inline-flex;
         align-items: center;
@@ -277,6 +300,10 @@
 
       .card-token.task {
         background: var(--task);
+      }
+
+      .what-section .section-lead {
+        max-width: none;
       }
 
       .flow-wrap {
@@ -623,29 +650,48 @@
       </header>
 
       <main>
-        <section id="what-it-is">
-          <div class="shell split">
-            <div>
-              <p class="eyebrow">What it is</p>
-              <h2>Human escalation for voice agents, owned by Twilio.</h2>
-            </div>
-            <div class="body-copy">
-              <p>
-                ElevenLabs can run the voice-agent conversation. Twilio can own
-                the phone number, Studio journey, TaskRouter routing, Flex task,
-                and downstream contact-center context. This blueprint connects
-                those pieces without relying on a blind transfer as the primary
-                handoff path.
-              </p>
-              <p>
-                The core move is simple: when Twilio sends the caller to
-                ElevenLabs, it passes the original parent
-                <span class="inline-code">CallSid</span> and caller metadata as
-                dynamic variables. When the agent needs a human, an ElevenLabs
-                webhook tool sends summary, intent, reason, and call identifiers
-                back to a protected Twilio Function. That Function updates the
-                original live call with the next TwiML instruction.
-              </p>
+        <section class="what-section" id="what-it-is">
+          <div class="shell">
+            <p class="eyebrow">What it is</p>
+            <h2>A call handoff pattern, not just a voice agent demo.</h2>
+            <p class="section-lead">
+              The blueprint connects Twilio Programmable Voice to an ElevenLabs
+              Conversational AI agent, passes the original Twilio parent
+              <span class="inline-code">CallSid</span> into the agent session,
+              and gives the agent a webhook tool that can update that original
+              live call when escalation is needed. The caller stays on the phone
+              while Twilio decides the next route.
+            </p>
+
+            <div class="cards">
+              <article class="card">
+                <span class="badge">Containment</span>
+                <h3>Let AI try first</h3>
+                <p>
+                  ElevenLabs handles the real-time voice-agent conversation,
+                  including self-service and escalation decisions. Twilio stays
+                  ready to take the call back when the agent cannot complete the
+                  job.
+                </p>
+              </article>
+              <article class="card">
+                <span class="badge blue">Control</span>
+                <h3>Keep routing in Twilio</h3>
+                <p>
+                  The handoff updates the original Twilio call resource, so the
+                  next destination can be Studio, TaskRouter, Flex, another voice
+                  app, a SIP endpoint, or a dial target.
+                </p>
+              </article>
+              <article class="card">
+                <span class="badge teal">Context</span>
+                <h3>Carry the handoff summary</h3>
+                <p>
+                  The agent sends intent, reason, summary, and call identifiers
+                  back to Twilio so a downstream route or human agent can see
+                  what happened before escalation.
+                </p>
+              </article>
             </div>
           </div>
         </section>
