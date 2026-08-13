@@ -86,6 +86,8 @@ Use **outbound Studio** when your app should start a Studio execution, let Studi
 
 Use **ElevenLabs native transfer** when the desired outcome is simply "send this caller to a phone number or SIP URI" and you do not need Twilio to receive the summary or control Studio/Flex/TaskRouter routing.
 
+> **Context payload extension point.** This reference implementation passes concise handoff context inline as Studio, TaskRouter, or Flex task attributes. In production, keep those attributes short. If the handoff payload grows, or if the destination is a generic TwiML route without TaskRouter attributes, store the full context in an external datastore keyed by `handoffId`, `parentCallSid`, or another correlation ID. Then pass only the identifier, such as `contextRef`, so Flex, a custom agent desktop, CRM, or another downstream system can retrieve the full context when needed.
+
 ### 2.1 Function Paths
 
 The repo includes these tested Function paths:

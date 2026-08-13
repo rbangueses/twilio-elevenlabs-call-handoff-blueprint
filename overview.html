@@ -391,6 +391,30 @@
         margin-top: 24px;
       }
 
+      .entry-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .entry-card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .entry-card strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .entry-card span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
       .flow-card {
         padding: 24px;
         border: 1px solid var(--line);
@@ -419,6 +443,7 @@
         align-items: center;
       }
 
+      .entry-card code,
       .route code,
       .inline-code {
         padding: 2px 5px;
@@ -449,7 +474,8 @@
         }
 
         .cards,
-        .paths {
+        .paths,
+        .entry-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
@@ -492,7 +518,8 @@
         }
 
         .cards,
-        .paths {
+        .paths,
+        .entry-grid {
           grid-template-columns: 1fr;
         }
 
@@ -691,29 +718,15 @@
                 </p>
               </article>
             </div>
-          </div>
-        </section>
 
-        <section id="when-to-use">
-          <div class="shell split">
-            <div>
-              <p class="eyebrow">When to use</p>
-              <h2>Use it when escalation is part of the customer journey.</h2>
-            </div>
-            <div class="body-copy">
-              <p>
-                Use this blueprint when the AI agent is allowed to solve common
-                issues, but needs a controlled human fallback for account access,
-                billing, compliance, complex support, or explicit requests for a
-                person.
-              </p>
-              <p>
-                It is especially useful when your Twilio number already starts in
-                Studio, when Flex should receive structured task attributes, or
-                when routing logic needs to stay in TaskRouter instead of inside
-                the voice-agent platform.
-              </p>
-            </div>
+            <p class="note-callout">
+              Extension point: keep inline task attributes small. For larger
+              payloads, or for routes without TaskRouter attributes, store the
+              full handoff context externally and pass a lookup identifier such
+              as <span class="inline-code">handoffId</span>,
+              <span class="inline-code">parentCallSid</span>, or
+              <span class="inline-code">contextRef</span>.
+            </p>
           </div>
         </section>
 
@@ -751,6 +764,31 @@
                   <span>Studio, TaskRouter, or custom TwiML receives the caller.</span>
                 </div>
               </div>
+            </div>
+
+            <div class="entry-grid" aria-label="Supported entry points">
+              <article class="entry-card">
+                <strong>Inbound PSTN</strong>
+                <span>
+                  A Twilio number starts in <code>/voice</code> or a Studio
+                  Flow, then sends the live call to ElevenLabs.
+                </span>
+              </article>
+              <article class="entry-card">
+                <strong>Outbound voice</strong>
+                <span>
+                  Your app starts <code>/start_outbound</code> or
+                  <code>/start_studio_outbound</code>, and Twilio connects the
+                  answered call through <code>/outbound</code>.
+                </span>
+              </article>
+              <article class="entry-card">
+                <strong>WhatsApp Business Calling</strong>
+                <span>
+                  A TwiML App can point the WhatsApp voice entry point to
+                  <code>/voice</code> or to the Studio Flow webhook.
+                </span>
+              </article>
             </div>
 
             <div class="paths">
@@ -815,6 +853,13 @@
                 </ul>
               </article>
             </div>
+
+            <p class="note-callout">
+              Outbound Studio currently uses Enqueue Call as the final Studio
+              widget. As of August 12, 2026, Send to Flex is not supported for
+              REST API-triggered outbound Studio flows, so Enqueue Call is the
+              tested interim route for creating the human-agent task.
+            </p>
           </div>
         </section>
 
