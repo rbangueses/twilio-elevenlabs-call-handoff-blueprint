@@ -33,11 +33,9 @@ The repo has been exercised end to end with the included inbound handoff paths, 
 - [5. Pattern B Setup: Using TaskRouter](#5-pattern-b-setup-using-taskrouter)
 - [6. Outbound Calls](#6-outbound-calls)
 - [7. Optional Conversation Memory](#7-optional-conversation-memory)
-- [8. Native ElevenLabs Transfer](#8-native-elevenlabs-transfer)
-- [9. How the Patterns Target the Right Call](#9-how-the-patterns-target-the-right-call)
-- [10. Test End to End](#10-test-end-to-end)
-- [11. Display Task Attributes in Flex](#11-display-task-attributes-in-flex)
-- [12. Local Checks](#12-local-checks)
+- [8. How the Patterns Target the Right Call](#8-how-the-patterns-target-the-right-call)
+- [9. Test End to End](#9-test-end-to-end)
+- [10. Display Task Attributes in Flex](#10-display-task-attributes-in-flex)
 
 ## 1. Prerequisites
 
@@ -845,17 +843,7 @@ If `profileFound` is `false`, confirm:
 
 If `profileFound` is `true` but `memoryContext` is empty, try a more specific query, lower the relevance threshold, or wait for extraction/indexing to finish.
 
-## 8. Native ElevenLabs Transfer
-
-ElevenLabs includes native transfer capabilities such as `transfer_to_number`. Use the native tool when the target is simply a phone number or SIP URI and you do not need Twilio to receive the summary or route through Studio/Flex/TaskRouter with custom attributes.
-
-This blueprint focuses on the custom webhook path because it preserves Twilio control of the call after escalation:
-
-- Studio can resume the same Flow execution.
-- TaskRouter/Flex can receive structured task attributes.
-- The handoff Function updates the original parent Call resource, not a generated child leg.
-
-## 9. How the Patterns Target the Right Call
+## 8. How the Patterns Target the Right Call
 
 The important handoff detail is the parent call SID.
 
@@ -880,7 +868,7 @@ The raw Twilio leg fields are preserved as `from` and `to`, while the normalized
 
 Do not substitute an ElevenLabs conversation ID, a child call SID, or a Flex task SID for `parentCallSid`.
 
-## 10. Test End to End
+## 9. Test End to End
 
 ### Pattern A: Studio
 
@@ -959,15 +947,11 @@ twilio serverless:logs --service-sid ZSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --enviro
 
 ### Common troubleshooting
 
-If the agent says the transfer sentence and then the call fails with Twilio's generic application-error message, inspect the call events and confirm `/studio_escalate` redirected to a real `STUDIO_FLOW_WEBHOOK_URL`. A 404 from a `webhooks.twilio.com/.../Flows/FW...` URL usually means the env var still points to a placeholder or unpublished/missing Flow.
-
 If outbound Studio reaches the TwiML Redirect `return` transition and then fails at the final widget with `failedToEnqueue`, confirm the final widget is Enqueue Call, not Send to Flex. As of August 12, 2026, Send to Flex does not support REST API-triggered outbound Studio flows.
-
-If the outbound Studio Enqueue Call widget fails, confirm it is configured with the Flex TaskRouter Workflow SID and task attributes. Do not use a Studio Flow SID or TaskRouter Workspace SID in the Workflow field.
 
 If the agent starts saying the transfer sentence but gets cut off, inspect the ElevenLabs tool configuration and restore `pre_tool_speech=force`, `execution_mode=post_tool_speech`, and `interruption_mode=disable_during_tool`.
 
-## 11. Display Task Attributes in Flex
+## 10. Display Task Attributes in Flex
 
 In Flex, inspect the active task attributes to confirm the handoff payload arrived:
 
@@ -1000,27 +984,3 @@ Expected attributes include:
 ```
 
 For outbound, expect `direction` and `type` to be `outbound`, with the customer in `customerNumber` and the Twilio number in `twilioNumber`.
-
-## 12. Local Checks
-
-Install dependencies and run tests:
-
-```bash
-cd serverless
-npm install
-npm test
-```
-
-The test suite covers:
-
-- ElevenLabs `register-call` request shape.
-- Outbound Twilio Calls API starter shape.
-- Studio outbound execution starter shape.
-- Direction-aware customer and Twilio number metadata.
-- Handoff payload validation.
-- TaskRouter `<Enqueue>` TwiML generation.
-- Direction-aware Studio return `<Redirect>` generation.
-- Conversation Memory profile lookup and Recall request shape.
-- `/memory_recall` authorization and tool response shape.
-- Bearer-token validation.
-- `/health` checks for valid TaskRouter workflow SID shape.
